@@ -7,6 +7,7 @@ import tipoDocumentoRoutes from "./routes/tipoDocumentoRoutes.js";
 import dotenv from "dotenv";
 import db, { testConnection, createTables } from "./db/db.js";
 import "./models/index.js";
+import areaRoutes from "./routes/AreaRoutes.js";
 
 dotenv.config();
 
@@ -36,6 +37,9 @@ app.use("/api/tipos-documento", tipoDocumentoRoutes);
 app.get("/", (req, res) => {
     res.send("API funcionando 🚀");
 });
+
+//Rutas
+app.use("/api/areas", areaRoutes);
 
 
 const PORT = process.env.PORT || process.env.PUERTO || 3000;
