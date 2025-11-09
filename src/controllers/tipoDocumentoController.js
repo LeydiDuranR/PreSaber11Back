@@ -1,10 +1,9 @@
-import { verificarCurso } from "../services/cursoService.js";
+import { obtenerTiposDocumento } from "../services/tipoDocumentoService.js";
 
-export const verificarCursoClave = async (req, res) => {
+export const listarTiposDocumento = async (req, res) => {
   try {
-    const { grado, grupo, cohorte, clave_acceso } = req.body;
-    const valido = await verificarCurso(grado, grupo, cohorte, clave_acceso);
-    res.status(200).json({ valido });
+    const tipos = await obtenerTiposDocumento();
+    res.status(200).json(tipos);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

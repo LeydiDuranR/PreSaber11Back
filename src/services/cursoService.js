@@ -6,3 +6,7 @@ export const verificarCurso = async (grado, grupo, cohorte, clave_acceso) => {
   });
   return !!curso; // true si existe, false si no
 };
+
+export const obtenerCursos = async () => {
+  return await Curso.findAll();
+};

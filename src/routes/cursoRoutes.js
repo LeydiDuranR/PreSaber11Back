@@ -1,7 +1,8 @@
 import { Router } from "express";
-import { verificarCursoClave } from "../controllers/cursoController.js";
+import { listarCursos, verificarCursoClave } from "../controllers/cursoController.js";
 
 const router = Router();
 router.post("/verificar", verificarCursoClave);
+router.get("/", listarCursos);
 
 export default router;

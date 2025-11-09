@@ -1,5 +1,5 @@
 import Usuario from "../models/Usuario.js";
-import Participante from "../models/Participante.js";
+import Participantes from "../models/Participantes.js";
 import Curso from "../models/Curso.js";
 import { createFirebaseUser } from "./firebaseService.js";
 
@@ -15,7 +15,6 @@ export const crearUsuarioService = async (data) => {
     grado,
     grupo,
     cohorte,
-    clave_acceso,
     password,
   } = data;
 
@@ -23,7 +22,7 @@ export const crearUsuarioService = async (data) => {
   try {
     // Verificar curso
     const curso = await Curso.findOne({
-      where: { grado, grupo, cohorte, clave_acceso },
+      where: { grado, grupo, cohorte },
     });
 
     if (!curso) throw new Error("Curso o clave incorrecta.");
