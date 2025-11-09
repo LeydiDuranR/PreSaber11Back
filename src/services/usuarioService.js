@@ -50,9 +50,9 @@ export const crearUsuarioService = async (data) => {
       { transaction }
     );
 
-    // Registrar en participante
-    await Participante.create(
-      { documento_participante: documento, grado, grupo, cohorte },
+    // Registrar en Participantes
+    await Participantes.create(
+      { documento_Participantes: documento, grado, grupo, cohorte },
       { transaction }
     );
 
