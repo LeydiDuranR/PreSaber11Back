@@ -3,7 +3,7 @@ import "./Institucion.js";
 import "./Usuario.js";
 import "./Rol.js";
 import "./TipoDocumento.js";
-import "./Participantes.js";
+import "./Participante.js";
 
 
 import "./Tema.js";
