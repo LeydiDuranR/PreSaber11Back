@@ -22,7 +22,7 @@ app.use(express.json());
 // Conectar DB
 (async () => {
     await testConnection();
-    await createTables();
+    // await createTables();
 })();
 
 

@@ -5,4 +5,16 @@ import "./Rol.js";
 import "./TipoDocumento.js";
 import "./Participantes.js";
 
+
+import "./Tema.js";
+import "./Area.js";
+import "./Pregunta.js";
+
+import "./Reto.js";
+import "./Opcion.js";
+import "./RespuestasReto.js";
+import "./ResultadoReto.js";
+
+import "./RetoPregunta.js";
+
 console.log("✅ Todos los modelos cargados correctamente");
