@@ -2,6 +2,7 @@ import db from "../db/db.js";
 import { DataTypes } from "sequelize";
 import Rol from "./Rol.js";
 import TipoDocumento from "./TipoDocumento.js";
+import Institucion from "./Institucion.js";
 
 const Usuario = db.define("usuario", {
     documento: { type: DataTypes.STRING(20), primaryKey: true },
@@ -32,6 +33,16 @@ Rol.hasMany(Usuario, {
 });
 Usuario.belongsTo(Rol, {
     foreignKey: "id_rol"
+});
+
+//relacion con institucion
+
+Institucion.hasMany(Usuario, {
+    foreignKey: "id_institucion",
+});
+
+Usuario.belongsTo(Institucion, {
+    foreignKey: "id_institucion",
 });
 
 export default Usuario;

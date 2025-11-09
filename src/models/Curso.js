@@ -21,6 +21,11 @@ const Curso = db.define("curso", {
     clave_acceso: {
         type: DataTypes.STRING(20),
         allowNull: false
+    },
+    habilitado: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true
     }
 }, {
     timestamps: false,

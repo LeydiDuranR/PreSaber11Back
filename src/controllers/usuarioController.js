@@ -4,6 +4,8 @@ import {
   obtenerUsuarioPorIdService,
   obtenerTodosUsuariosService,
   verificarUsuarioPorUidService,
+  obtenerDocentesPorInstitucion,
+  buscarDocentePorNombre
 } from "../services/usuarioService.js";
 
 export const crearUsuario = async (req, res) => {
@@ -60,5 +62,39 @@ export const verificarUsuarioPorUid = async (req, res) => {
     res.status(200).json({ registrado: true, usuario });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+
+export const obtenerDocentesInstitucion = async (req, res) => {
+  try {
+    const { id_institucion } = req.params;
+
+    if (!id_institucion) {
+      return res.status(400).json({ error: "Debe proporcionar el id_institucion." });
+    }
+
+    const docentes = await obtenerDocentesPorInstitucion(id_institucion);
+    res.status(200).json(docentes);
+
+  } catch (error) {
+    res.status(404).json({ error: error.message });
+  }
+};
+
+export const obtenerDocentesPorNombreYApellido = async (req, res) => {
+  try {
+    const { id_institucion } = req.params;
+    const { nombre } = req.query;
+
+    if (!id_institucion || !nombre) {
+      return res.status(400).json({ error: "Debe proporcionar el id_institucion y el nombre de búsqueda." });
+    }
+
+    const docentes = await buscarDocentePorNombre(nombre, id_institucion);
+    res.status(200).json(docentes);
+
+  } catch (error) {
+    res.status(404).json({ error: error.message });
   }
 };

@@ -2,6 +2,9 @@ import Usuario from "../models/Usuario.js";
 import Participante from "../models/Participante.js";
 import Curso from "../models/Curso.js";
 import { createFirebaseUser } from "./firebaseService.js";
+import Rol from "../models/Rol.js";
+import TipoDocumento from "../models/TipoDocumento.js";
+import { Op } from "sequelize";
 
 export const crearUsuarioService = async (data) => {
   const {
@@ -94,3 +97,80 @@ export const verificarUsuarioPorUidService = async (uid_firebase) => {
   const usuario = await Usuario.findOne({ where: { uid_firebase } });
   return usuario;
 };
+
+
+/** Obtener todos los docentes (id_rol = 2) **/
+export const obtenerDocentesPorInstitucion = async (id_institucion) => {
+  try {
+    const docentes = await Usuario.findAll({
+      where: { id_institucion: id_institucion, id_rol: 2 },
+      include: [
+        { model: Rol, attributes: ["id_rol", "descripcion"] },
+        { model: TipoDocumento, attributes: ["id_tipo_documento", "descripcion"] }
+      ],
+      attributes: ["documento", "nombre", "apellido", "correo", "telefono", "fecha_nacimiento"]
+    });
+
+    if (!docentes || docentes.length === 0) {
+      throw new Error("No se encontraron docentes registrados.");
+    }
+
+    return docentes;
+  } catch (error) {
+    throw new Error(error.message);
+  }
+}
+
+/** 🔍 Buscar docentes por nombre o apellido **/
+export const buscarDocentePorNombre = async (nombreBusqueda, id_institucion) => {
+  try {
+    const palabras = nombreBusqueda.trim().split(/\s+/); // separa por espacios
+    let condiciones = [];
+
+    if (palabras.length === 1) {
+      // Buscar por nombre O apellido si solo hay una palabra
+      condiciones = [
+        { nombre: { [Op.like]: `%${palabras[0]}%` } },
+        { apellido: { [Op.like]: `%${palabras[0]}%` } }
+      ];
+    } else {
+      // Buscar combinando nombre y apellido
+      condiciones = [
+        {
+          [Op.and]: [
+            { nombre: { [Op.like]: `%${palabras[0]}%` } },
+            { apellido: { [Op.like]: `%${palabras[1]}%` } }
+          ]
+        },
+        {
+          [Op.and]: [
+            { nombre: { [Op.like]: `%${palabras[1]}%` } },
+            { apellido: { [Op.like]: `%${palabras[0]}%` } }
+          ]
+        }
+      ];
+    }
+
+    const docentes = await Usuario.findAll({
+      where: {
+        id_rol: 2,
+        id_institucion: id_institucion,
+        [Op.or]: condiciones
+      },
+      include: [
+        { model: Rol, attributes: ["id_rol", "descripcion"] },
+        { model: TipoDocumento, attributes: ["id_tipo_documento", "descripcion"] }
+      ],
+      attributes: ["documento", "nombre", "apellido", "correo", "telefono", "fecha_nacimiento"]
+    });
+
+    if (!docentes || docentes.length === 0) {
+      throw new Error("No se encontraron docentes con ese nombre o apellido.");
+    }
+
+    return docentes;
+  } catch (error) {
+    throw new Error(error.message);
+  }
+}
+

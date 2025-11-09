@@ -9,6 +9,8 @@ import db, { testConnection, createTables } from "./db/db.js";
 import "./models/index.js";
 import areaRoutes from "./routes/AreaRoutes.js";
 import preguntaRoutes from "./routes/PreguntaRoutes.js";
+import temaRoutes from "./routes/TemaRoutes.js";
+import opcionRoutes from "./routes/OpcionRoutes.js";
 
 dotenv.config();
 
@@ -35,6 +37,9 @@ app.use("/api/usuarios", usuarioRoutes);
 app.use("/api/tipos-documento", tipoDocumentoRoutes);
 app.use("/api/areas", areaRoutes);
 app.use("/api/preguntas", preguntaRoutes);
+app.use("/api/temas", temaRoutes);
+app.use("/api/opciones", opcionRoutes);
+
 // Ruta base
 app.get("/", (req, res) => {
     res.send("API funcionando 🚀");
