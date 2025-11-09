@@ -1,6 +1,9 @@
 import express from "express";
 import path from "path";
 import cors from "cors";
+import cursoRoutes from "./routes/cursoRoutes.js";
+import usuarioRoutes from "./routes/usuarioRoutes.js";
+import tipoDocumentoRoutes from "./routes/tipoDocumentoRoutes.js";
 import dotenv from "dotenv";
 import db, { testConnection, createTables } from "./db/db.js";
 import "./models/index.js";
@@ -25,7 +28,9 @@ app.use(express.json());
     // await createTables();
 })();
 
-
+app.use("/api/curso", cursoRoutes);
+app.use("/api/usuarios", usuarioRoutes);
+app.use("/api/tipos-documento", tipoDocumentoRoutes);
 
 // Ruta base
 app.get("/", (req, res) => {
