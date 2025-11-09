@@ -8,6 +8,7 @@ import dotenv from "dotenv";
 import db, { testConnection, createTables } from "./db/db.js";
 import "./models/index.js";
 import areaRoutes from "./routes/AreaRoutes.js";
+import preguntaRoutes from "./routes/PreguntaRoutes.js";
 
 dotenv.config();
 
@@ -32,14 +33,13 @@ app.use(express.json());
 app.use("/api/curso", cursoRoutes);
 app.use("/api/usuarios", usuarioRoutes);
 app.use("/api/tipos-documento", tipoDocumentoRoutes);
-
+app.use("/api/areas", areaRoutes);
+app.use("/api/preguntas", preguntaRoutes);
 // Ruta base
 app.get("/", (req, res) => {
     res.send("API funcionando 🚀");
 });
 
-//Rutas
-app.use("/api/areas", areaRoutes);
 
 
 const PORT = process.env.PORT || process.env.PUERTO || 3000;
