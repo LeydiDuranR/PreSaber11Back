@@ -5,6 +5,10 @@ async function crearPregunta(enunciado, file, nivel_dificultad, id_area, id_tema
     try {
         let imagenUrl = null;
 
+        if (!enunciado && !file) {
+            throw new Error("Debe proporcionar al menos un enunciado o un archivo.");
+        }
+
         if (!nivel_dificultad || !id_area) {
             throw new Error("Nivel de dificultad y área son obligatorios.");
         }
@@ -15,11 +19,11 @@ async function crearPregunta(enunciado, file, nivel_dificultad, id_area, id_tema
         }
 
         const pregunta = await Pregunta.create({
-            enunciado,
-            imagen: imagenUrl,
+            enunciado: enunciado || null,
+            imagen: imagenUrl || null,
             nivel_dificultad,
             id_area,
-            id_tema,
+            id_tema: id_tema || null,
         });
 
         return pregunta;
