@@ -1,5 +1,6 @@
 import db from "../db/db.js";
 import { DataTypes } from "sequelize";
+import Institucion from "./Institucion.js";
 
 const Participante = db.define("participante", {
     documento_participante: {
@@ -21,7 +22,16 @@ const Participante = db.define("participante", {
         type: DataTypes.INTEGER,
         primaryKey: true,
         allowNull: false
-    }
+    },
+    id_institucion: {
+        type: DataTypes.INTEGER,
+        // primaryKey: true,
+        // allowNull: false,
+        references: {
+            model: Institucion,
+            key: "id_institucion",
+        },
+    },
 }, {
     timestamps: false,
     freezeTableName: true
