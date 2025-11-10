@@ -1,4 +1,4 @@
-import { obtenerCursos, verificarCurso } from "../services/cursoService.js";
+import { obtenerCursos, verificarCurso, obtenerCursosPorInstitucion } from "../services/cursoService.js";
 
 export const verificarCursoClave = async (req, res) => {
   try {
@@ -16,5 +16,16 @@ export const listarCursos = async (req, res) => {
     res.status(200).json(tipos);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+export const listarCursosPorInstitucion = async (req, res) => {
+  try {
+    const { id_institucion } = req.params;
+    const cursos = await obtenerCursosPorInstitucion(id_institucion);
+    res.json(cursos);
+  } catch (error) {
+    console.error("Error al listar cursos por institución:", error);
+    res.status(500).json({ message: "Error al obtener cursos" });
   }
 };

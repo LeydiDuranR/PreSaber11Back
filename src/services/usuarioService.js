@@ -15,6 +15,7 @@ export const crearUsuarioService = async (data) => {
     telefono,
     fecha_nacimiento,
     id_tipo_documento,
+    id_institucion,
     grado,
     grupo,
     cohorte,
@@ -27,7 +28,7 @@ export const crearUsuarioService = async (data) => {
     console.log(data);
     // Verificar curso
     const curso = await Curso.findOne({
-      where: { grado, grupo, cohorte },
+      where: { grado, grupo, cohorte, id_institucion },
     });
 
     if (!curso) throw new Error("Curso o clave incorrecta.");
@@ -52,7 +53,8 @@ export const crearUsuarioService = async (data) => {
         telefono,
         fecha_nacimiento,
         id_tipo_documento,
-        id_rol: 3, // estudiante
+        id_rol: 3, 
+        id_institucion,
         uid_firebase,
       },
       { transaction }
