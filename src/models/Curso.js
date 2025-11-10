@@ -18,6 +18,15 @@ const Curso = db.define("curso", {
         primaryKey: true,
         allowNull: false
     },
+    id_institucion: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        primaryKey: true, 
+        references: {
+            model: Institucion,
+            key: "id_institucion"
+        }
+    },
     clave_acceso: {
         type: DataTypes.STRING(20),
         allowNull: false
