@@ -23,9 +23,10 @@ export const crearUsuarioService = async (data) => {
   } = data;
 
   const transaction = await Usuario.sequelize.transaction();
-  try {
 
+  try {
     console.log(data);
+
     // Verificar curso
     const curso = await Curso.findOne({
       where: { grado, grupo, cohorte, id_institucion },
@@ -34,6 +35,7 @@ export const crearUsuarioService = async (data) => {
     if (!curso) throw new Error("Curso o clave incorrecta.");
 
     console.log(curso);
+
     // Crear en Firebase
     const uid_firebase = await createFirebaseUser(
       correo,
@@ -43,7 +45,7 @@ export const crearUsuarioService = async (data) => {
 
     console.log(uid_firebase);
 
-    // Crear usuario en BD
+    // Crear usuario en BD (forzamos los campos para incluir id_tipo_documento)
     const nuevoUsuario = await Usuario.create(
       {
         documento,
@@ -53,18 +55,38 @@ export const crearUsuarioService = async (data) => {
         telefono,
         fecha_nacimiento,
         id_tipo_documento,
-        id_rol: 3, 
+        id_rol: 3, // rol estudiante
         id_institucion,
         uid_firebase,
       },
-      { transaction }
+      {
+        transaction,
+        fields: [
+          "documento",
+          "nombre",
+          "apellido",
+          "correo",
+          "telefono",
+          "fecha_nacimiento",
+          "id_tipo_documento",
+          "id_rol",
+          "id_institucion",
+          "uid_firebase",
+        ],
+      }
     );
 
     console.log(nuevoUsuario);
 
     // Registrar en Participante
     await Participante.create(
-      { documento_participante: nuevoUsuario.documento, grado, grupo, cohorte },
+      {
+        documento_participante: nuevoUsuario.documento,
+        grado,
+        grupo,
+        cohorte,
+        id_institucion,
+      },
       { transaction }
     );
 
