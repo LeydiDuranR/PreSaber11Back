@@ -5,7 +5,8 @@ import {
   obtenerTodosUsuariosService,
   verificarUsuarioPorUidService,
   obtenerDocentesPorInstitucion,
-  buscarDocentePorNombre
+  buscarDocentePorNombre,
+  verificarUsuarioExistenteService
 } from "../services/usuarioService.js";
 
 export const crearUsuario = async (req, res) => {
@@ -25,6 +26,35 @@ export const editarUsuario = async (req, res) => {
     const { documento } = req.params;
     const usuario = await editarUsuarioService(documento, req.body);
     res.status(200).json({ mensaje: "Usuario actualizado", usuario });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const verificarUsuarioExistente = async (req, res) => {
+  try {
+    const { documento, correo } = req.query;
+
+    if (!documento && !correo) {
+      return res
+        .status(400)
+        .json({ error: "Debe proporcionar documento o correo para verificar." });
+    }
+
+    const usuario = await verificarUsuarioExistenteService(documento, correo);
+
+    if (!usuario) {
+      return res.status(200).json({
+        existe: false,
+        mensaje: "No existe un usuario con los datos proporcionados.",
+      });
+    }
+
+    res.status(200).json({
+      existe: true,
+      mensaje: "El usuario ya se encuentra registrado.",
+      usuario,
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

@@ -85,6 +85,27 @@ export const editarUsuarioService = async (documento, datos) => {
   return usuario;
 };
 
+export const verificarUsuarioExistenteService = async (documento, correo) => {
+  try {
+    const condiciones = [];
+
+    if (documento) condiciones.push({ documento });
+    if (correo) condiciones.push({ correo });
+
+    if (condiciones.length === 0)
+      throw new Error("Debe proporcionar un documento o correo para verificar.");
+
+    const usuario = await Usuario.findOne({
+      where: { [Op.or]: condiciones },
+      attributes: ["documento", "nombre", "apellido", "correo"],
+    });
+
+    return usuario;
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
 export const obtenerUsuarioPorIdService = async (documento) => {
   const usuario = await Usuario.findByPk(documento);
   if (!usuario) throw new Error("Usuario no encontrado.");
