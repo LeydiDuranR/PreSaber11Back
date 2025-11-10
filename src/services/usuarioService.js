@@ -85,19 +85,34 @@ export const editarUsuarioService = async (documento, datos) => {
   return usuario;
 };
 
-export const verificarUsuarioExistenteService = async (documento, correo) => {
+export const verificarUsuarioExistenteService = async (documento, correo, id_tipo_documento) => {
   try {
     const condiciones = [];
 
-    if (documento) condiciones.push({ documento });
+    // Si se envía documento + tipo de documento
+    if (documento && id_tipo_documento) {
+      condiciones.push({ documento, id_tipo_documento });
+    } 
+    // Si solo se envía documento
+    else if (documento) {
+      condiciones.push({ documento });
+    }
+
+    // Si se envía correo
     if (correo) condiciones.push({ correo });
 
     if (condiciones.length === 0)
-      throw new Error("Debe proporcionar un documento o correo para verificar.");
+      throw new Error("Debe proporcionar un documento, correo o tipo de documento para verificar.");
 
     const usuario = await Usuario.findOne({
       where: { [Op.or]: condiciones },
-      attributes: ["documento", "nombre", "apellido", "correo"],
+      attributes: ["documento", "nombre", "apellido", "correo", "id_tipo_documento"],
+      include: [
+        {
+          model: TipoDocumento,
+          attributes: ["id_tipo_documento", "descripcion"], // ✅ CAMBIO AQUÍ
+        },
+      ],
     });
 
     return usuario;
@@ -105,6 +120,8 @@ export const verificarUsuarioExistenteService = async (documento, correo) => {
     throw new Error(error.message);
   }
 };
+
+
 
 export const obtenerUsuarioPorIdService = async (documento) => {
   const usuario = await Usuario.findByPk(documento);

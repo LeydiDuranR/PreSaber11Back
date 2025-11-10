@@ -12,7 +12,7 @@ import {
 
 const router = Router();
 
-router.get("/usuario/verificar", verificarUsuarioExistente);
+router.post("/usuario/verificar", verificarUsuarioExistente);
 router.get("/verificar/:uid_firebase", verificarUsuarioPorUid);
 router.get("/institucion/:id_institucion", obtenerDocentesInstitucion);
 router.get("/buscar/:id_institucion", obtenerDocentesPorNombreYApellido);

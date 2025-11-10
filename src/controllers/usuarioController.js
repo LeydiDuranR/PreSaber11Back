@@ -33,7 +33,7 @@ export const editarUsuario = async (req, res) => {
 
 export const verificarUsuarioExistente = async (req, res) => {
   try {
-    const { documento, correo } = req.query;
+    const { documento, correo, id_tipo_documento } = req.body;
 
     if (!documento && !correo) {
       return res
@@ -41,7 +41,7 @@ export const verificarUsuarioExistente = async (req, res) => {
         .json({ error: "Debe proporcionar documento o correo para verificar." });
     }
 
-    const usuario = await verificarUsuarioExistenteService(documento, correo);
+    const usuario = await verificarUsuarioExistenteService(documento, correo, id_tipo_documento);
 
     if (!usuario) {
       return res.status(200).json({
@@ -59,7 +59,6 @@ export const verificarUsuarioExistente = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
 export const obtenerUsuarioPorId = async (req, res) => {
   try {
     const { documento } = req.params;
