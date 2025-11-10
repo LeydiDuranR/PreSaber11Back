@@ -11,6 +11,7 @@ import areaRoutes from "./routes/AreaRoutes.js";
 import preguntaRoutes from "./routes/PreguntaRoutes.js";
 import temaRoutes from "./routes/TemaRoutes.js";
 import opcionRoutes from "./routes/OpcionRoutes.js";
+import institucionRoutes from "./routes/institucionRoutes.js";
 
 dotenv.config();
 
@@ -33,6 +34,7 @@ app.use(express.json());
 })();
 
 app.use("/api/curso", cursoRoutes);
+app.use("/api/institucion", institucionRoutes); 
 app.use("/api/usuarios", usuarioRoutes);
 app.use("/api/tipos-documento", tipoDocumentoRoutes);
 app.use("/api/areas", areaRoutes);
