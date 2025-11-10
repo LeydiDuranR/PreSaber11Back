@@ -2,8 +2,8 @@ import { obtenerCursos, verificarCurso, obtenerCursosPorInstitucion } from "../s
 
 export const verificarCursoClave = async (req, res) => {
   try {
-    const { grado, grupo, cohorte, clave_acceso } = req.body;
-    const valido = await verificarCurso(grado, grupo, cohorte, clave_acceso);
+    const { grado, grupo, cohorte, id_institucion, clave_acceso } = req.body;
+    const valido = await verificarCurso(grado, grupo, cohorte, id_institucion, clave_acceso);
     res.status(200).json({ valido });
   } catch (error) {
     res.status(500).json({ error: error.message });
