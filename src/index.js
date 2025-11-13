@@ -12,6 +12,7 @@ import preguntaRoutes from "./routes/PreguntaRoutes.js";
 import temaRoutes from "./routes/TemaRoutes.js";
 import opcionRoutes from "./routes/OpcionRoutes.js";
 import institucionRoutes from "./routes/institucionRoutes.js";
+import RetoRoutes from "./routes/RetoRoutes.js";
 
 dotenv.config();
 
@@ -41,6 +42,7 @@ app.use("/api/areas", areaRoutes);
 app.use("/api/preguntas", preguntaRoutes);
 app.use("/api/temas", temaRoutes);
 app.use("/api/opciones", opcionRoutes);
+app.use("/api/retos", RetoRoutes);
 
 // Ruta base
 app.get("/", (req, res) => {

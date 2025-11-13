@@ -7,6 +7,7 @@ const ResultadoReto = db.define('resultado_reto', {
 
     id_resultado_reto: {
         type: DataTypes.INTEGER,
+        autoIncrement: true,
         primaryKey: true,
         allowNull: false,
     },

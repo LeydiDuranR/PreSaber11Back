@@ -100,6 +100,79 @@ export const crearUsuarioService = async (data) => {
   }
 };
 
+// completar saimer
+/* export const crearDocenteService = async (data) => {
+  const {
+    documento,
+    nombre,
+    apellido,
+    correo,
+    telefono,
+    fecha_nacimiento,
+    id_tipo_documento,
+    id_institucion,
+  } = data;
+
+  const transaction = await Usuario.sequelize.transaction();
+
+  try {
+    console.log(data);
+    
+    //volver aleatoria
+    const password = "123456";
+
+    //correo con email y clave aleatoria
+
+    // Crear en Firebase
+    const uid_firebase = await createFirebaseUser(
+      correo,
+      password,
+      `${nombre} ${apellido}`
+    );
+
+    console.log(uid_firebase);
+
+    // Crear usuario en BD (forzamos los campos para incluir id_tipo_documento)
+    const nuevoUsuario = await Usuario.create(
+      {
+        documento,
+        nombre,
+        apellido,
+        correo,
+        telefono,
+        fecha_nacimiento,
+        id_tipo_documento,
+        id_rol: 2, 
+        id_institucion,
+        uid_firebase,
+      },
+      {
+        transaction,
+        fields: [
+          "documento",
+          "nombre",
+          "apellido",
+          "correo",
+          "telefono",
+          "fecha_nacimiento",
+          "id_tipo_documento",
+          "id_rol",
+          "id_institucion",
+          "uid_firebase",
+        ],
+      }
+    );
+
+    console.log(nuevoUsuario);
+
+    await transaction.commit();
+    return nuevoUsuario;
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}; */
+
 export const editarUsuarioService = async (documento, datos) => {
   const usuario = await Usuario.findByPk(documento);
   if (!usuario) throw new Error("Usuario no encontrado.");
