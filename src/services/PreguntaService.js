@@ -129,7 +129,15 @@ async function obtenerPreguntasPorArea(id_area) {
             throw new Error("El ID del área es obligatorio.");
         }
         const preguntas = await Pregunta.findAll({
-            where: { id_area }
+            where: { id_area },
+            include: [{
+                model: Area,
+                attributes: ["id_area", "nombre"],
+            },
+            {
+                model: Tema,
+                attributes: ["id_tema", "descripcion"],
+            },]
         });
 
         if (!preguntas || preguntas.length === 0) {
