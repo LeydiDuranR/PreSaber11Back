@@ -1,4 +1,4 @@
-import retoService from "../services/retoService.js";
+import retoService from "../services/RetoService.js";
 
 class RetoController {
   
