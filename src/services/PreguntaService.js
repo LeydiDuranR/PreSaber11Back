@@ -2,6 +2,8 @@ import Pregunta from "../models/Pregunta.js";
 import { subirArchivoAFirebase, limpiarArchivosTemporales } from "../utils/fileHandlers.js";
 import Area from "../models/Area.js";
 import Tema from "../models/Tema.js";
+import Opcion from "../models/Opcion.js";
+import db from "../db/db.js"
 
 async function crearPregunta(enunciado, file, nivel_dificultad, id_area, id_tema) {
     try {
@@ -150,4 +152,88 @@ async function obtenerPreguntasPorArea(id_area) {
     }
 }
 
-export default { crearPregunta, editarPregunta, obtenerPregunta, obtenerPreguntas, obtenerPreguntasPorArea };
+async function crearPreguntasLote(preguntasArray, filesMap = {}) {
+    const transaction = await db.transaction();
+    try {
+        const resultado = [];
+
+        for (let pIndex = 0; pIndex < preguntasArray.length; pIndex++) {
+            const p = preguntasArray[pIndex];
+            const {
+                enunciado,
+                nivel_dificultad,
+                id_area,
+                id_tema,
+                opciones = []
+            } = p;
+
+
+            if (!enunciado && !filesMap[`pregunta_${pIndex}`]) {
+                throw new Error(`Pregunta ${pIndex}: falta enunciado o imagen`);
+            }
+            if (!nivel_dificultad || !id_area) {
+                throw new Error(`Pregunta ${pIndex}: nivel_dificultad e id_area son obligatorios`);
+            }
+
+
+            let urlPregunta = null;
+            const filePregunta = filesMap[`pregunta_${pIndex}`];
+            if (filePregunta) {
+                urlPregunta = await subirArchivoAFirebase(filePregunta.path, filePregunta.path, "icons");
+                limpiarArchivosTemporales(filePregunta.path);
+            }
+
+            // crear pregunta
+            const nuevaPregunta = await Pregunta.create({
+                enunciado: enunciado || null,
+                imagen: urlPregunta || null,
+                nivel_dificultad,
+                id_area,
+                id_tema: id_tema || null
+            }, { transaction });
+
+            // crear opciones de esta pregunta
+            const opcionesCreadas = [];
+            for (let oIndex = 0; oIndex < opciones.length; oIndex++) {
+
+                const opt = opciones[oIndex];
+                const fileOpcion = filesMap[`opcion_${pIndex}_${oIndex}`];
+                let urlOpcion = null;
+
+                if (!opt.texto_opcion && !fileOpcion) {
+                    throw new Error(`La opción ${oIndex} de la pregunta ${pIndex} debe tener texto o imagen`);
+                }
+
+                if (fileOpcion) {
+                    urlOpcion = await subirArchivoAFirebase(fileOpcion.path, fileOpcion.path, "icons");
+                    limpiarArchivosTemporales(fileOpcion.path);
+                }
+
+
+                const nuevaOpcion = await Opcion.create({
+                    texto_opcion: opt.texto_opcion || null,
+                    imagen: urlOpcion || null,
+                    es_correcta: opt.es_correcta ?? false,
+                    id_pregunta: nuevaPregunta.id_pregunta
+                }, { transaction });
+
+                opcionesCreadas.push(nuevaOpcion);
+            }
+
+            resultado.push({
+                pregunta: nuevaPregunta,
+                opciones: opcionesCreadas
+            });
+        }
+
+        await transaction.commit();
+        return resultado;
+
+    } catch (err) {
+        await transaction.rollback();
+        throw new Error(err.message);
+    }
+}
+
+
+export default { crearPregunta, editarPregunta, obtenerPregunta, obtenerPreguntas, obtenerPreguntasPorArea, crearPreguntasLote };

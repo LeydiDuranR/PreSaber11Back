@@ -9,5 +9,6 @@ router.get("/", PreguntaController.obtenerPreguntas);
 router.get("/:id", PreguntaController.obtenerPregunta);
 router.get("/area/:id_area", PreguntaController.obtenerPreguntasPorArea);
 router.put("/:id", upload.single("file"), PreguntaController.editarPregunta);
+router.post("/preguntas/lote", upload.any(), PreguntaController.crearPreguntasLote);
 
 export default router;

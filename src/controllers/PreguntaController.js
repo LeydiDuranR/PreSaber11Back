@@ -71,4 +71,37 @@ export const editarPregunta = async (req, res) => {
   }
 };
 
-export default { crearPregunta, obtenerPreguntas, obtenerPregunta, obtenerPreguntasPorArea, editarPregunta };
+
+async function crearPreguntasLote(req, res) {
+  try {
+    const filesMap = {};
+
+    if (req.files && Array.isArray(req.files)) {
+      for (const file of req.files) {
+        filesMap[file.fieldname] = file;
+      }
+    }
+
+    // console.log("FilesMap construido:", Object.keys(filesMap)); 
+
+    const raw = req.body.data;
+    if (!raw) return res.status(400).json({ message: "Campo 'data' ausente" });
+
+    const payload = JSON.parse(raw);
+    const preguntas = payload.preguntas;
+
+    if (!Array.isArray(preguntas) || preguntas.length === 0) {
+      return res.status(400).json({ message: "El arreglo 'preguntas' es requerido" });
+    }
+
+    const creada = await PreguntaService.crearPreguntasLote(preguntas, filesMap);
+    return res.status(201).json({ success: true, data: creada });
+
+  } catch (error) {
+    console.error("Error crearPreguntasLote:", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+}
+
+
+export default { crearPregunta, obtenerPreguntas, obtenerPregunta, obtenerPreguntasPorArea, editarPregunta, crearPreguntasLote };
