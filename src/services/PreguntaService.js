@@ -87,6 +87,11 @@ async function obtenerPregunta(id) {
                     model: Tema,
                     attributes: ["id_tema", "descripcion"],
                 },
+                {
+                    model: Opcion,
+                    as: "opcions",
+                    attributes: ["id_opcion", "texto_opcion", "imagen", "es_correcta"]
+                }
             ],
         });
         if (!pregunta) {
