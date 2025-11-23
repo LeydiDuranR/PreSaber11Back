@@ -4,6 +4,7 @@ import Area from "../models/Area.js";
 import Tema from "../models/Tema.js";
 import Opcion from "../models/Opcion.js";
 import db from "../db/db.js"
+import OpcionService from "./OpcionService.js";
 
 async function crearPregunta(enunciado, file, nivel_dificultad, id_area, id_tema) {
     try {
@@ -38,31 +39,28 @@ async function crearPregunta(enunciado, file, nivel_dificultad, id_area, id_tema
 
 
 /** Editar una pregunta existente **/
-async function editarPregunta(id, enunciado, file, nivel_dificultad, id_area, id_tema) {
+async function editarPregunta(id, enunciado, file, nivel_dificultad, id_area, id_tema, eliminar_imagen = false, options = {}) {
     try {
-        if (!id) {
-            throw new Error("El ID de la pregunta es obligatorio para editar.");
-        }
+        if (!id) throw new Error("El ID de la pregunta es obligatorio.");
         const pregunta = await Pregunta.findByPk(id);
-        if (!pregunta) {
-            throw new Error("Pregunta no encontrada.");
-        }
+        if (!pregunta) throw new Error("Pregunta no encontrada.");
 
-        let imagenUrl = pregunta.imagen; // conservar imagen actual por defecto
+        let imagenUrl = pregunta.imagen;
 
-        // Si hay nuevo archivo, subirlo y reemplazar la imagen
         if (file) {
             imagenUrl = await subirArchivoAFirebase(file.path, file.path, "icons");
             limpiarArchivosTemporales(file.path);
+        } else if (eliminar_imagen) {
+            imagenUrl = null;
         }
 
         await pregunta.update({
-            enunciado: enunciado || pregunta.enunciado || null,
-            imagen: imagenUrl || null,
-            nivel_dificultad: nivel_dificultad || pregunta.nivel_dificultad,
-            id_area: id_area || pregunta.id_area,
-            id_tema: id_tema || pregunta.id_tema || null,
-        });
+            enunciado: enunciado ?? pregunta.enunciado,
+            imagen: imagenUrl,
+            nivel_dificultad: nivel_dificultad ?? pregunta.nivel_dificultad,
+            id_area: id_area ?? pregunta.id_area,
+            id_tema: id_tema ?? pregunta.id_tema,
+        }, options);
 
         return pregunta;
     } catch (error) {
@@ -262,4 +260,45 @@ async function crearPreguntasLote(preguntasArray, filesMap = {}) {
 }
 
 
-export default { crearPregunta, editarPregunta, obtenerPregunta, obtenerPreguntas, obtenerPreguntasPorArea, crearPreguntasLote };
+
+async function editarPreguntaConOpciones({ id_pregunta, enunciado, nivel_dificultad, id_area, id_tema, file, eliminar_imagen = false, opciones }) {
+    const t = await db.transaction();
+    try {
+        // Editar la pregunta principal
+        const pregunta = await editarPregunta(
+            id_pregunta,
+            enunciado,
+            file,
+            nivel_dificultad,
+            id_area,
+            id_tema,
+            eliminar_imagen,
+            { transaction: t }
+        );
+
+        // Editar cada opción
+        if (opciones && Array.isArray(opciones)) {
+            for (const op of opciones) {
+                await OpcionService.editarOpcion(
+                    op.id_opcion,
+                    op.texto_opcion ?? null,
+                    op.file ?? null,
+                    op.es_correcta,
+                    id_pregunta,
+                    op.eliminar_imagen ?? false,
+                    { transaction: t }
+                );
+            }
+        }
+
+        await t.commit();
+
+        return await Pregunta.findByPk(id_pregunta, { include: [Opcion] });
+
+    } catch (error) {
+        await t.rollback();
+        throw new Error(error.message);
+    }
+}
+
+export default { crearPregunta, editarPregunta, obtenerPregunta, obtenerPreguntas, obtenerPreguntasPorArea, crearPreguntasLote, editarPreguntaConOpciones };

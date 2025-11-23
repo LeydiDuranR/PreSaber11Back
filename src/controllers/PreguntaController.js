@@ -53,7 +53,7 @@ export const obtenerPreguntasPorArea = async (req, res) => {
 export const editarPregunta = async (req, res) => {
   try {
     const { id } = req.params;
-    const { enunciado, nivel_dificultad, id_area, id_tema } = req.body;
+    const { enunciado, nivel_dificultad, id_area, id_tema, eliminar_imagen } = req.body;
     const file = req.file || null;
 
     const pregunta = await PreguntaService.editarPregunta(
@@ -62,7 +62,8 @@ export const editarPregunta = async (req, res) => {
       file,
       nivel_dificultad,
       id_area,
-      id_tema
+      id_tema,
+      eliminar_imagen === 'true'
     );
 
     res.status(200).json(pregunta);
@@ -107,5 +108,42 @@ async function crearPreguntasLote(req, res) {
   }
 }
 
+async function editarPreguntaConOpciones(req, res) {
+  try {
+    const { id } = req.params;
+    const { enunciado, nivel_dificultad, id_area, id_tema, opciones } = req.body;
+    const filesArray = req.files || [];
 
-export default { crearPregunta, obtenerPreguntas, obtenerPregunta, obtenerPreguntasPorArea, editarPregunta, crearPreguntasLote };
+    const filesMap = {};
+    for (const file of filesArray) {
+      filesMap[file.fieldname] = file;
+    }
+
+    const opcionesConImagen = JSON.parse(opciones).map(op => {
+      const key = `file_${op.id_opcion}`;
+      if (filesMap[key]) op.file = filesMap[key];
+      return op;
+    });
+
+    const preguntaActualizada = await PreguntaService.editarPreguntaConOpciones({
+      id_pregunta: id,
+      enunciado,
+      nivel_dificultad,
+      id_area,
+      id_tema,
+      file: filesMap["file"] || null,
+      eliminar_imagen: req.body.eliminar_imagen === 'true',
+      opciones: opcionesConImagen
+    });
+
+    res.status(200).json(preguntaActualizada);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export default {
+  crearPregunta, obtenerPreguntas, obtenerPregunta,
+  obtenerPreguntasPorArea, editarPregunta, crearPreguntasLote,
+  editarPreguntaConOpciones
+};

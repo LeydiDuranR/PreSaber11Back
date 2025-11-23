@@ -17,10 +17,10 @@ async function crearOpcion(req, res) {
 async function editarOpcion(req, res) {
     try {
         const { id } = req.params;
-        const { texto_opcion, es_correcta, id_pregunta } = req.body;
+        const { texto_opcion, es_correcta, id_pregunta, eliminar_imagen } = req.body;
         const file = req.file;
 
-        const opcion = await opcionService.editarOpcion(id, texto_opcion, file, es_correcta, id_pregunta);
+        const opcion = await opcionService.editarOpcion(id, texto_opcion, file, es_correcta, id_pregunta, eliminar_imagen === 'true');
         res.status(200).json(opcion);
     } catch (error) {
         res.status(400).json({ message: error.message });
@@ -38,4 +38,4 @@ async function obtenerOpcionesDePregunta(req, res) {
     }
 }
 
-export default {crearOpcion, editarOpcion, obtenerOpcionesDePregunta};
+export default { crearOpcion, editarOpcion, obtenerOpcionesDePregunta };
