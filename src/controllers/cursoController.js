@@ -1,4 +1,7 @@
-import { obtenerCursos, verificarCurso, crearCurso, listarCursosPorInstituciones, obtenerCursosPorInstitucion } from "../services/cursoService.js";
+import {
+  obtenerCursos, verificarCurso, crearCurso, listarCursosPorInstituciones,
+  obtenerCursosPorInstitucion, actualizarEstadoCurso
+} from "../services/cursoService.js";
 
 export const verificarCursoClave = async (req, res) => {
   try {
@@ -63,6 +66,32 @@ export const crearCursoInstitucion = async (req, res) => {
     res.status(201).json({
       mensaje: "Curso creado exitosamente.",
       data: nuevoCurso
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
+export const actualizarEstadoCursoController = async (req, res) => {
+  try {
+    const { grado, grupo, cohorte, id_institucion, habilitado } = req.body;
+
+    if (!grado || !grupo || !cohorte || !id_institucion || habilitado === undefined) {
+      return res.status(400).json({ error: "Todos los campos son obligatorios." });
+    }
+
+    const cursoActualizado = await actualizarEstadoCurso({
+      grado,
+      grupo,
+      cohorte,
+      id_institucion,
+      habilitado
+    });
+
+    res.status(200).json({
+      mensaje: "Estado del curso actualizado exitosamente.",
+      data: cursoActualizado
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

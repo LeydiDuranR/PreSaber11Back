@@ -1,6 +1,8 @@
 import Curso from "../models/Curso.js";
 import Institucion from "../models/Institucion.js";
 import Participante from "../models/Participante.js";
+import Usuario from "../models/Usuario.js";
+import Rol from "../models/Rol.js";
 
 export const verificarCurso = async (grado, grupo, cohorte, id_institucion, clave_acceso) => {
   const curso = await Curso.findOne({
@@ -34,7 +36,7 @@ export const listarCursosPorInstituciones = async (id_institucion) => {
         {
           model: Institucion,
           attributes: ["id_institucion", "nombre"]
-        }
+        },
       ],
       attributes: ["grado", "grupo", "cohorte", "clave_acceso", "habilitado"]
     });
@@ -42,14 +44,70 @@ export const listarCursosPorInstituciones = async (id_institucion) => {
     if (!cursos || cursos.length === 0) {
       throw new Error("No se encontraron cursos registrados para esta institución.");
     }
+    const cursosFormateados = await Promise.all(
+      cursos.map(async (curso) => {
+        // Buscar participantes de este curso específico
+        const participantes = await Participante.findAll({
+          where: {
+            grado: curso.grado,
+            grupo: curso.grupo,
+            cohorte: curso.cohorte,
+            id_institucion: curso.institucion.id_institucion
+          },
+          attributes: ["documento_participante"]
+        });
 
-    return cursos;
+        const documentos = participantes.map(p => p.documento_participante);
+
+        // Buscar docente (rol 2) entre los participantes
+        const docente = await Usuario.findOne({
+          where: {
+            documento: documentos,
+            id_rol: 2
+          },
+          attributes: ["documento", "nombre", "apellido", "correo"],
+          include: [
+            {
+              model: Rol,
+              attributes: ["id_rol", "descripcion"]
+            }
+          ]
+        });
+
+        // Contar estudiantes (rol 3) entre los participantes
+        const cantidadEstudiantes = await Usuario.count({
+          where: {
+            documento: documentos,
+            id_rol: 3
+          }
+        });
+
+        return {
+          grado: curso.grado,
+          grupo: curso.grupo,
+          cohorte: curso.cohorte,
+          clave_acceso: curso.clave_acceso,
+          habilitado: curso.habilitado,
+          institucion: curso.institucion,
+          cantidad_estudiantes: cantidadEstudiantes,
+          docente: docente ? {
+            documento: docente.documento,
+            nombre: docente.nombre,
+            apellido: docente.apellido,
+            nombre_completo: `${docente.nombre} ${docente.apellido}`,
+            correo: docente.correo
+          } : null
+        };
+      })
+    );
+
+    return cursosFormateados;
   } catch (error) {
     throw new Error(error.message);
   }
 };
 
-/** 🏫 Crear un nuevo curso **/
+/** Crear un nuevo curso **/
 export const crearCurso = async (grado, grupo, cohorte, clave_acceso, id_institucion, id_docente) => {
   try {
     if (!grado || !grupo || !cohorte || !clave_acceso || !id_institucion) {
@@ -93,6 +151,26 @@ export const crearCurso = async (grado, grupo, cohorte, clave_acceso, id_institu
     }
 
     return { curso: nuevoCurso, docente: docenteAsignado };
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
+
+export const actualizarEstadoCurso = async ({ grado, grupo, cohorte, id_institucion, habilitado }) => {
+  try {
+    const curso = await Curso.findOne({
+      where: { grado, grupo, cohorte, id_institucion }
+    });
+
+    if (!curso) {
+      throw new Error("Curso no encontrado.");
+    }
+
+    curso.habilitado = habilitado;
+    await curso.save();
+
+    return curso;
   } catch (error) {
     throw new Error(error.message);
   }
