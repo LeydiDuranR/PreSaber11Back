@@ -155,10 +155,50 @@ async function obtenerPreguntasPorArea(id_area) {
 async function crearPreguntasLote(preguntasArray, filesMap = {}) {
     const transaction = await db.transaction();
     try {
-        const resultado = [];
+        const imagenesPromises = [];
+        const imagenesKeys = [];
 
         for (let pIndex = 0; pIndex < preguntasArray.length; pIndex++) {
-            const p = preguntasArray[pIndex];
+            const filePregunta = filesMap[`pregunta_${pIndex}`];
+            if (filePregunta) {
+                imagenesKeys.push({ tipo: 'pregunta', pIndex });
+                imagenesPromises.push(
+                    subirArchivoAFirebase(filePregunta.path, filePregunta.path, "icons")
+                        .then(url => {
+                            limpiarArchivosTemporales(filePregunta.path);
+                            return url;
+                        })
+                );
+            }
+
+            const opciones = preguntasArray[pIndex].opciones || [];
+            for (let oIndex = 0; oIndex < opciones.length; oIndex++) {
+                const fileOpcion = filesMap[`opcion_${pIndex}_${oIndex}`];
+                if (fileOpcion) {
+                    imagenesKeys.push({ tipo: 'opcion', pIndex, oIndex });
+                    imagenesPromises.push(
+                        subirArchivoAFirebase(fileOpcion.path, fileOpcion.path, "icons")
+                            .then(url => {
+                                limpiarArchivosTemporales(fileOpcion.path);
+                                return url;
+                            })
+                    );
+                }
+            }
+        }
+
+        const urlsSubidas = await Promise.all(imagenesPromises);
+
+        const urlsMap = {};
+        imagenesKeys.forEach((key, idx) => {
+            if (key.tipo === 'pregunta') {
+                urlsMap[`pregunta_${key.pIndex}`] = urlsSubidas[idx];
+            } else {
+                urlsMap[`opcion_${key.pIndex}_${key.oIndex}`] = urlsSubidas[idx];
+            }
+        });
+
+        const preguntasPromises = preguntasArray.map(async (p, pIndex) => {
             const {
                 enunciado,
                 nivel_dificultad,
@@ -167,64 +207,45 @@ async function crearPreguntasLote(preguntasArray, filesMap = {}) {
                 opciones = []
             } = p;
 
-
-            if (!enunciado && !filesMap[`pregunta_${pIndex}`]) {
+            if (!enunciado && !urlsMap[`pregunta_${pIndex}`]) {
                 throw new Error(`Pregunta ${pIndex}: falta enunciado o imagen`);
             }
             if (!nivel_dificultad || !id_area) {
                 throw new Error(`Pregunta ${pIndex}: nivel_dificultad e id_area son obligatorios`);
             }
 
-
-            let urlPregunta = null;
-            const filePregunta = filesMap[`pregunta_${pIndex}`];
-            if (filePregunta) {
-                urlPregunta = await subirArchivoAFirebase(filePregunta.path, filePregunta.path, "icons");
-                limpiarArchivosTemporales(filePregunta.path);
-            }
-
-            // crear pregunta
             const nuevaPregunta = await Pregunta.create({
                 enunciado: enunciado || null,
-                imagen: urlPregunta || null,
+                imagen: urlsMap[`pregunta_${pIndex}`] || null,
                 nivel_dificultad,
                 id_area,
                 id_tema: id_tema || null
             }, { transaction });
 
-            // crear opciones de esta pregunta
-            const opcionesCreadas = [];
-            for (let oIndex = 0; oIndex < opciones.length; oIndex++) {
+            const opcionesPromises = opciones.map(async (opt, oIndex) => {
+                const urlOpcion = urlsMap[`opcion_${pIndex}_${oIndex}`];
 
-                const opt = opciones[oIndex];
-                const fileOpcion = filesMap[`opcion_${pIndex}_${oIndex}`];
-                let urlOpcion = null;
-
-                if (!opt.texto_opcion && !fileOpcion) {
+                if (!opt.texto_opcion && !urlOpcion) {
                     throw new Error(`La opción ${oIndex} de la pregunta ${pIndex} debe tener texto o imagen`);
                 }
 
-                if (fileOpcion) {
-                    urlOpcion = await subirArchivoAFirebase(fileOpcion.path, fileOpcion.path, "icons");
-                    limpiarArchivosTemporales(fileOpcion.path);
-                }
-
-
-                const nuevaOpcion = await Opcion.create({
+                return await Opcion.create({
                     texto_opcion: opt.texto_opcion || null,
                     imagen: urlOpcion || null,
                     es_correcta: opt.es_correcta ?? false,
                     id_pregunta: nuevaPregunta.id_pregunta
                 }, { transaction });
+            });
 
-                opcionesCreadas.push(nuevaOpcion);
-            }
+            const opcionesCreadas = await Promise.all(opcionesPromises);
 
-            resultado.push({
+            return {
                 pregunta: nuevaPregunta,
                 opciones: opcionesCreadas
-            });
-        }
+            };
+        });
+
+        const resultado = await Promise.all(preguntasPromises);
 
         await transaction.commit();
         return resultado;

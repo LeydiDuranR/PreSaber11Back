@@ -75,14 +75,11 @@ export const editarPregunta = async (req, res) => {
 async function crearPreguntasLote(req, res) {
   try {
     const filesMap = {};
-
     if (req.files && Array.isArray(req.files)) {
       for (const file of req.files) {
         filesMap[file.fieldname] = file;
       }
     }
-
-    // console.log("FilesMap construido:", Object.keys(filesMap)); 
 
     const raw = req.body.data;
     if (!raw) return res.status(400).json({ message: "Campo 'data' ausente" });
@@ -94,11 +91,18 @@ async function crearPreguntasLote(req, res) {
       return res.status(400).json({ message: "El arreglo 'preguntas' es requerido" });
     }
 
-    const creada = await PreguntaService.crearPreguntasLote(preguntas, filesMap);
-    return res.status(201).json({ success: true, data: creada });
+    res.status(202).json({
+      success: true,
+      message: "Procesando preguntas...",
+      total: preguntas.length
+    });
+
+    PreguntaService.crearPreguntasLote(preguntas, filesMap)
+      .then(() => console.log("✅ Preguntas creadas"))
+      .catch(err => console.error("❌ Error:", err));
 
   } catch (error) {
-    console.error("Error crearPreguntasLote:", error);
+    console.error("Error:", error);
     return res.status(500).json({ success: false, message: error.message });
   }
 }
