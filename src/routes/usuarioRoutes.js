@@ -7,7 +7,8 @@ import {
   verificarUsuarioPorUid,
   obtenerDocentesInstitucion,
   obtenerDocentesPorNombreYApellido,
-  verificarUsuarioExistente
+  verificarUsuarioExistente,
+  obtenerUsuarioPorUid
 } from "../controllers/usuarioController.js";
 
 const router = Router();
@@ -16,6 +17,7 @@ router.post("/usuario/verificar", verificarUsuarioExistente);
 router.get("/verificar/:uid_firebase", verificarUsuarioPorUid);
 router.get("/institucion/:id_institucion", obtenerDocentesInstitucion);
 router.get("/buscar/:id_institucion", obtenerDocentesPorNombreYApellido);
+router.get("/firebase/:uid_firebase", obtenerUsuarioPorUid);
 
 router.post("/", crearUsuario);
 router.put("/:documento", editarUsuario);

@@ -217,10 +217,14 @@ export const verificarUsuarioExistenteService = async (documento, correo, id_tip
   }
 };
 
-
-
 export const obtenerUsuarioPorIdService = async (documento) => {
   const usuario = await Usuario.findByPk(documento);
+  if (!usuario) throw new Error("Usuario no encontrado.");
+  return usuario;
+};
+
+export const obtenerUsuarioPorUidFirebase = async (uid_firebase) => {
+  const usuario = await Usuario.findOne({ where: { uid_firebase } });
   if (!usuario) throw new Error("Usuario no encontrado.");
   return usuario;
 };

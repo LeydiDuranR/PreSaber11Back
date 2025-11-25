@@ -6,7 +6,8 @@ import {
   verificarUsuarioPorUidService,
   obtenerDocentesPorInstitucion,
   buscarDocentePorNombre,
-  verificarUsuarioExistenteService
+  verificarUsuarioExistenteService,
+  obtenerUsuarioPorUidFirebase
 } from "../services/usuarioService.js";
 
 export const crearUsuario = async (req, res) => {
@@ -63,6 +64,16 @@ export const obtenerUsuarioPorId = async (req, res) => {
   try {
     const { documento } = req.params;
     const usuario = await obtenerUsuarioPorIdService(documento);
+    res.status(200).json(usuario);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const obtenerUsuarioPorUid = async (req, res) => {
+  try {
+    const { uid_firebase } = req.params;
+    const usuario = await obtenerUsuarioPorUidFirebase(uid_firebase);
     res.status(200).json(usuario);
   } catch (error) {
     res.status(500).json({ error: error.message });
