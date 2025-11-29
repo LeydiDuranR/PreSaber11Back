@@ -28,8 +28,8 @@ export const Opcion = db.define("opcion", {
 );
 
 // Relación con Pregunta
-Pregunta.hasMany(Opcion, { foreignKey: "id_pregunta" });
-Opcion.belongsTo(Pregunta, { foreignKey: "id_pregunta" });
+Pregunta.hasMany(Opcion, { foreignKey: "id_pregunta", as: "opciones" });
+Opcion.belongsTo(Pregunta, { foreignKey: "id_pregunta", as: "pregunta" });
 
 
 export default Opcion;

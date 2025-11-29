@@ -14,7 +14,12 @@ import "./Reto.js";
 import "./Opcion.js";
 import "./RespuestasReto.js";
 import "./ResultadoReto.js";
-
 import "./RetoPregunta.js";
+
+import "./SalaPrivada.js";
+import "./ParticipanteSala.js";
+import "./RespuestaSalaPvP.js";
+import "./PreguntasSala.js";
+
 
 console.log("✅ Todos los modelos cargados correctamente");
