@@ -5,6 +5,7 @@ import upload from "../middlewares/upload.js";
 const router = Router();
 
 router.post("/crear", upload.single("file"), PreguntaController.crearPregunta);
+router.get("/cantidad", PreguntaController.contarPreguntasPorAreaYNivel);
 router.get("/", PreguntaController.obtenerPreguntas);
 router.get("/:id", PreguntaController.obtenerPregunta);
 router.get("/area/:id_area", PreguntaController.obtenerPreguntasPorArea);

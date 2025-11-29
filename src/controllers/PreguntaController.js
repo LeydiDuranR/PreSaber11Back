@@ -142,8 +142,31 @@ async function editarPreguntaConOpciones(req, res) {
   }
 };
 
+async function contarPreguntasPorAreaYNivel(req, res) {
+    try {
+        const { id_area, nivel_dificultad } = req.query;
+
+        const total = await PreguntaService.contarPreguntasPorAreaYNivel(
+            id_area,
+            nivel_dificultad
+        );
+
+        return res.json({
+            ok: true,
+            total
+        });
+
+    } catch (error) {
+        return res.status(400).json({
+            ok: false,
+            mensaje: error.message
+        });
+    }
+}
+
+
 export default {
   crearPregunta, obtenerPreguntas, obtenerPregunta,
   obtenerPreguntasPorArea, editarPregunta, crearPreguntasLote,
-  editarPreguntaConOpciones
+  editarPreguntaConOpciones, contarPreguntasPorAreaYNivel
 };

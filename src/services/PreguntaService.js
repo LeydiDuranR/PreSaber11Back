@@ -87,7 +87,7 @@ async function obtenerPregunta(id) {
                 },
                 {
                     model: Opcion,
-                    as: "opcions",
+                    as: "opciones",
                     attributes: ["id_opcion", "texto_opcion", "imagen", "es_correcta"]
                 }
             ],
@@ -100,8 +100,6 @@ async function obtenerPregunta(id) {
         throw new Error(error.message);
     }
 }
-
-
 
 async function obtenerPreguntas() {
     try {
@@ -126,7 +124,6 @@ async function obtenerPreguntas() {
         throw new Error(error.message);
     }
 }
-
 
 async function obtenerPreguntasPorArea(id_area) {
     try {
@@ -259,8 +256,6 @@ async function crearPreguntasLote(preguntasArray, filesMap = {}) {
     }
 }
 
-
-
 async function editarPreguntaConOpciones({ id_pregunta, enunciado, nivel_dificultad, id_area, id_tema, file, eliminar_imagen = false, opciones }) {
     const t = await db.transaction();
     try {
@@ -301,4 +296,32 @@ async function editarPreguntaConOpciones({ id_pregunta, enunciado, nivel_dificul
     }
 }
 
-export default { crearPregunta, editarPregunta, obtenerPregunta, obtenerPreguntas, obtenerPreguntasPorArea, crearPreguntasLote, editarPreguntaConOpciones };
+async function contarPreguntasPorAreaYNivel(id_area, nivel_dificultad) {
+    try {
+        if (!id_area || !nivel_dificultad) {
+            throw new Error("El área y el nivel de dificultad son obligatorios.");
+        }
+
+        const nivel = nivel_dificultad.toLowerCase();
+        const nivelesValidos = ["bajo", "medio", "alto"];
+
+        if (!nivelesValidos.includes(nivel)) {
+            throw new Error("El nivel de dificultad debe ser: bajo, medio o alto.");
+        }
+
+        const total = await Pregunta.count({
+            where: {
+                id_area,
+                nivel_dificultad: nivel
+            }
+        });
+
+        return total;
+
+    } catch (error) {
+        throw new Error(error.message);
+    }
+}
+
+
+export default { crearPregunta, editarPregunta, obtenerPregunta, obtenerPreguntas, obtenerPreguntasPorArea, crearPreguntasLote, editarPreguntaConOpciones, contarPreguntasPorAreaYNivel };
