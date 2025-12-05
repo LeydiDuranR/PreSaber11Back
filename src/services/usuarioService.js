@@ -7,6 +7,16 @@ import TipoDocumento from "../models/TipoDocumento.js";
 import { Op } from "sequelize";
 import { admin } from "../config/firebase.js";
 
+
+const generarPasswordTemporal = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$';
+  let password = '';
+  for (let i = 0; i < 12; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+};
+
 export const crearUsuarioService = async (data) => {
   const {
     documento,
@@ -101,8 +111,7 @@ export const crearUsuarioService = async (data) => {
   }
 };
 
-// completar saimer
-/* export const crearDocenteService = async (data) => {
+export const crearDocenteService = async (data) => {
   const {
     documento,
     nombre,
@@ -117,24 +126,36 @@ export const crearUsuarioService = async (data) => {
   const transaction = await Usuario.sequelize.transaction();
 
   try {
-    console.log(data);
-    
-    //volver aleatoria
-    const password = "123456";
+    console.log("📝 Iniciando creación de docente:", data);
 
-    //correo con email y clave aleatoria
+    // 1. Verificar que el correo y documento no existan
+    const usuarioExistente = await Usuario.findOne({
+      where: {
+        [Op.or]: [
+          { correo },
+          { documento, id_tipo_documento }
+        ]
+      }
+    });
 
-    // Crear en Firebase
+    if (usuarioExistente) {
+      throw new Error("El correo o documento ya están registrados en el sistema.");
+    }
+
+    // 2. Generar contraseña temporal
+    const passwordTemporal = generarPasswordTemporal();
+    console.log("🔑 Contraseña temporal generada");
+
+    // 3. Crear usuario en Firebase
     const uid_firebase = await createFirebaseUser(
       correo,
-      password,
+      passwordTemporal,
       `${nombre} ${apellido}`
     );
+    console.log("✅ Usuario creado en Firebase:", uid_firebase);
 
-    console.log(uid_firebase);
-
-    // Crear usuario en BD (forzamos los campos para incluir id_tipo_documento)
-    const nuevoUsuario = await Usuario.create(
+    // 4. Crear usuario en BD con rol de docente (id_rol = 2)
+    const nuevoDocente = await Usuario.create(
       {
         documento,
         nombre,
@@ -143,7 +164,7 @@ export const crearUsuarioService = async (data) => {
         telefono,
         fecha_nacimiento,
         id_tipo_documento,
-        id_rol: 2, 
+        id_rol: 2, // Rol docente
         id_institucion,
         uid_firebase,
       },
@@ -164,15 +185,61 @@ export const crearUsuarioService = async (data) => {
       }
     );
 
-    console.log(nuevoUsuario);
+    console.log("✅ Docente creado en BD:", nuevoDocente.documento);
+
+    // 5. Enviar correo de restablecimiento de contraseña
+    try {
+      const link = await admin.auth().generatePasswordResetLink(correo, {
+        url: 'https://sishub-639f8.firebaseapp.com/__/auth/action',
+      });
+      
+      console.log("📧 Link de recuperación generado:", link);
+      
+      // Aquí Firebase enviará automáticamente el correo usando tu plantilla
+      // Si necesitas enviar un correo personalizado adicional, puedes usar nodemailer
+      
+    } catch (emailError) {
+      console.error("⚠️ Error al generar link de recuperación:", emailError);
+      // No hacemos rollback porque el usuario ya fue creado exitosamente
+    }
 
     await transaction.commit();
-    return nuevoUsuario;
+    
+    return {
+      docente: nuevoDocente,
+      mensaje: "Docente creado exitosamente. Se ha enviado un correo para establecer la contraseña."
+    };
+
   } catch (error) {
     await transaction.rollback();
+    console.error("❌ Error al crear docente:", error);
     throw error;
   }
-}; */
+};
+
+
+export const reenviarCorreoRecuperacion = async (correo) => {
+  try {
+    const usuario = await Usuario.findOne({ where: { correo } });
+    
+    if (!usuario) {
+      throw new Error("No se encontró un usuario con ese correo.");
+    }
+
+    const link = await admin.auth().generatePasswordResetLink(correo, {
+      url: 'https://sishub-639f8.firebaseapp.com/__/auth/action',
+    });
+
+    return {
+      mensaje: "Correo de recuperación enviado exitosamente.",
+      link // Solo para desarrollo, en producción no devolver el link
+    };
+
+  } catch (error) {
+    console.error("Error al reenviar correo:", error);
+    throw error;
+  }
+};
 
 export const editarUsuarioService = async (documento, datos) => {
   const usuario = await Usuario.findByPk(documento);

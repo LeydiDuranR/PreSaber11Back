@@ -7,7 +7,9 @@ import {
   obtenerDocentesPorInstitucion,
   buscarDocentePorNombre,
   verificarUsuarioExistenteService,
-  obtenerUsuarioPorUidFirebase
+  obtenerUsuarioPorUidFirebase,
+  crearDocenteService,
+  reenviarCorreoRecuperacion
 } from "../services/usuarioService.js";
 
 export const crearUsuario = async (req, res) => {
@@ -19,6 +21,48 @@ export const crearUsuario = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+export const crearDocente = async (req, res) => {
+  try {
+    const resultado = await crearDocenteService(req.body);
+    res.status(201).json({
+      success: true,
+      data: resultado.docente,
+      mensaje: resultado.mensaje
+    });
+  } catch (error) {
+    console.error("Error en crearDocente:", error);
+    res.status(400).json({
+      success: false,
+      mensaje: error.message || "Error al crear docente"
+    });
+  }
+};
+
+export const reenviarCorreo = async (req, res) => {
+  try {
+    const { correo } = req.body;
+    
+    if (!correo) {
+      return res.status(400).json({
+        success: false,
+        mensaje: "El correo es requerido"
+      });
+    }
+
+    const resultado = await reenviarCorreoRecuperacion(correo);
+    res.status(200).json({
+      success: true,
+      mensaje: resultado.mensaje
+    });
+  } catch (error) {
+    console.error("Error al reenviar correo:", error);
+    res.status(400).json({
+      success: false,
+      mensaje: error.message || "Error al reenviar correo"
+    });
   }
 };
 
