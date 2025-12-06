@@ -9,8 +9,7 @@ import {
   obtenerDocentesPorNombreYApellido,
   verificarUsuarioExistente,
   obtenerUsuarioPorUid,
-  crearDocente,
-  reenviarCorreo,
+  crearDocente
 } from "../controllers/usuarioController.js";
 
 const router = Router();
