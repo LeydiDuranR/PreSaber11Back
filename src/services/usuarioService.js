@@ -187,22 +187,6 @@ export const crearDocenteService = async (data) => {
 
     console.log("✅ Docente creado en BD:", nuevoDocente.documento);
 
-    // 5. Enviar correo de restablecimiento de contraseña
-    try {
-      const link = await admin.auth().generatePasswordResetLink(correo, {
-        url: 'https://sishub-639f8.firebaseapp.com/__/auth/action',
-      });
-      
-      console.log("📧 Link de recuperación generado:", link);
-      
-      // Aquí Firebase enviará automáticamente el correo usando tu plantilla
-      // Si necesitas enviar un correo personalizado adicional, puedes usar nodemailer
-      
-    } catch (emailError) {
-      console.error("⚠️ Error al generar link de recuperación:", emailError);
-      // No hacemos rollback porque el usuario ya fue creado exitosamente
-    }
-
     await transaction.commit();
     
     return {
@@ -213,30 +197,6 @@ export const crearDocenteService = async (data) => {
   } catch (error) {
     await transaction.rollback();
     console.error("❌ Error al crear docente:", error);
-    throw error;
-  }
-};
-
-
-export const reenviarCorreoRecuperacion = async (correo) => {
-  try {
-    const usuario = await Usuario.findOne({ where: { correo } });
-    
-    if (!usuario) {
-      throw new Error("No se encontró un usuario con ese correo.");
-    }
-
-    const link = await admin.auth().generatePasswordResetLink(correo, {
-      url: 'https://sishub-639f8.firebaseapp.com/__/auth/action',
-    });
-
-    return {
-      mensaje: "Correo de recuperación enviado exitosamente.",
-      link // Solo para desarrollo, en producción no devolver el link
-    };
-
-  } catch (error) {
-    console.error("Error al reenviar correo:", error);
     throw error;
   }
 };
