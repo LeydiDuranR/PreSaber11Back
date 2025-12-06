@@ -8,6 +8,7 @@ import {
   obtenerDocentesInstitucion,
   obtenerDocentesPorNombreYApellido,
   verificarUsuarioExistente,
+  verificarCorreoExiste,
   obtenerUsuarioPorUid,
   crearDocente
 } from "../controllers/usuarioController.js";
@@ -16,6 +17,7 @@ const router = Router();
 
 router.post("/docente", crearDocente);
 router.post("/usuario/verificar", verificarUsuarioExistente);
+router.post("/verificar-correo", verificarCorreoExiste);
 router.get("/verificar/:uid_firebase", verificarUsuarioPorUid);
 router.get("/institucion/:id_institucion", obtenerDocentesInstitucion);
 router.get("/buscar/:id_institucion", obtenerDocentesPorNombreYApellido);

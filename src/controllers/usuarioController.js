@@ -1,3 +1,4 @@
+import Usuario from "../models/Usuario.js";
 import {
   crearUsuarioService,
   editarUsuarioService,
@@ -78,6 +79,37 @@ export const verificarUsuarioExistente = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+export const verificarCorreoExiste = async (req, res) => {
+  try {
+    const { correo } = req.body;
+    
+    if (!correo) {
+      return res.status(400).json({
+        success: false,
+        existe: false,
+        mensaje: "El correo es requerido"
+      });
+    }
+
+    const usuario = await Usuario.findOne({ where: { correo } });
+    
+    res.status(200).json({
+      success: true,
+      existe: !!usuario,
+      mensaje: usuario 
+        ? "Correo registrado" 
+        : "No existe una cuenta con este correo electrónico"
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      existe: false,
+      mensaje: error.message
+    });
+  }
+};
+
 export const obtenerUsuarioPorId = async (req, res) => {
   try {
     const { documento } = req.params;
