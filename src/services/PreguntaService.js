@@ -256,7 +256,7 @@ async function crearPreguntasLote(preguntasArray, filesMap = {}) {
     }
 }
 
-async function editarPreguntaConOpcionesSegura({ 
+async function editarPreguntaConOpciones({ 
     id_pregunta, 
     enunciado, 
     nivel_dificultad, 
