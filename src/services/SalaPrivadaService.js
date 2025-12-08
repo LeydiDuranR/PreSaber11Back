@@ -12,6 +12,19 @@ import { Op } from 'sequelize';
 
 class SalaPrivadaService {
 
+  // Sistema de experiencia según dificultad
+  obtenerPuntosExperiencia(nivelDificultad, esCorrecta) {
+    if (!esCorrecta) return 0;
+    
+    const pesos = {
+      'bajo': 5,
+      'medio': 10,
+      'alto': 15
+    };
+    
+    return pesos[nivelDificultad.toLowerCase()] || 10;
+  }
+
   // Generar código único para la sala (formato: ABC-1234)
   generarCodigoSala() {
     const letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -340,6 +353,13 @@ class SalaPrivadaService {
     const transaction = await db.transaction();
 
     try {
+      // Obtener la sala para conocer el nivel de dificultad
+      const sala = await SalaPrivada.findByPk(idSala, { transaction });
+      
+      if (!sala) {
+        throw new Error('Sala no encontrada');
+      }
+
       // Verificar que la opción sea correcta
       const opcion = await Opcion.findByPk(idOpcion, { transaction });
 
@@ -357,6 +377,9 @@ class SalaPrivadaService {
         tiempo_respuesta_segundos: tiempoRespuesta
       }, { transaction });
 
+      // Calcular puntos de experiencia según dificultad
+      const puntosExperiencia = this.obtenerPuntosExperiencia(sala.nivel_dificultad, opcion.es_correcta);
+
       // Actualizar contador del participante
       const participante = await ParticipanteSala.findOne({
         where: {
@@ -371,6 +394,7 @@ class SalaPrivadaService {
         preguntas_correctas: opcion.es_correcta
           ? participante.preguntas_correctas + 1
           : participante.preguntas_correctas,
+        experiencia_ganada: participante.experiencia_ganada + puntosExperiencia,
         estado_jugador: 'jugando'
       }, { transaction });
 
@@ -414,12 +438,10 @@ class SalaPrivadaService {
       const puntaje = totalPreguntas > 0
         ? (participante.preguntas_correctas / totalPreguntas) * 100
         : 0;
-      const experiencia = participante.preguntas_correctas * 10;
 
       await participante.update({
         estado_jugador: 'finalizado',
         puntaje_final: puntaje.toFixed(2),
-        experiencia_ganada: experiencia,
         fecha_finalizacion: new Date()
       }, { transaction });
 
@@ -445,7 +467,7 @@ class SalaPrivadaService {
         puntaje_final: puntaje.toFixed(2),
         preguntas_correctas: participante.preguntas_correctas,
         total_preguntas: totalPreguntas,
-        experiencia_ganada: experiencia
+        experiencia_ganada: participante.experiencia_ganada
       };
 
     } catch (error) {
@@ -473,8 +495,7 @@ class SalaPrivadaService {
                 as: 'estudiante',
                 attributes: ['documento', 'nombre', 'apellido', 'uid_firebase']
               }
-            ],
-            order: [['puntaje_final', 'DESC']]
+            ]
           }
         ]
       });
@@ -483,13 +504,27 @@ class SalaPrivadaService {
         throw new Error('Sala no encontrada');
       }
 
-      const participantesOrdenados = sala.participantes.sort(
-        (a, b) => Number(b.puntaje_final) - Number(a.puntaje_final)
-      );
+      // Ordenar participantes: primero por puntaje (descendente), luego por fecha de finalización (ascendente)
+      const participantesOrdenados = sala.participantes.sort((a, b) => {
+        const puntajeA = Number(a.puntaje_final);
+        const puntajeB = Number(b.puntaje_final);
+        
+        // Si los puntajes son diferentes, ordenar por puntaje
+        if (puntajeA !== puntajeB) {
+          return puntajeB - puntajeA;
+        }
+        
+        // Si hay empate, ordenar por quien terminó primero
+        const fechaA = a.fecha_finalizacion ? new Date(a.fecha_finalizacion).getTime() : Infinity;
+        const fechaB = b.fecha_finalizacion ? new Date(b.fecha_finalizacion).getTime() : Infinity;
+        
+        return fechaA - fechaB;
+      });
 
+      // Actualizar posiciones finales en la base de datos
       for (let i = 0; i < participantesOrdenados.length; i++) {
         await participantesOrdenados[i].update({
-          posicion: i + 1  // posición final real
+          posicion: i + 1
         });
       }
 
@@ -628,7 +663,7 @@ class SalaPrivadaService {
     }
   }
 
-  // Limpiar salas expiradas (cron job)
+  // Por implementar 
   async limpiarSalasExpiradas() {
     try {
       const ahora = new Date();
