@@ -28,77 +28,86 @@ class SimulacroGrupalService {
   }
 
   // Crear simulacro grupal
-  async crearSimulacro(idDocente, grado, grupo, cohorte, idInstitucion, cantidadPreguntas, duracionMinutos) {
-    const transaction = await db.transaction();
+async crearSimulacro(idDocente, grado, grupo, cohorte, idInstitucion, cantidadPreguntas, duracionMinutos) {
+  const transaction = await db.transaction();
 
-    try {
-      // Validar que sea docente y esté asignado al curso
-      const docente = await Usuario.findOne({
-        where: {
-          documento: idDocente,
-          id_rol: 2 // Rol docente
-        },
-        transaction
-      });
+  try {
+    // Validar docente
+    const docente = await Usuario.findOne({
+      where: {
+        documento: idDocente,
+        id_rol: 2
+      },
+      transaction
+    });
 
-      if (!docente) {
-        throw new Error('Usuario no es docente o no existe');
-      }
-
-      // Verificar que el curso exista
-      const curso = await Curso.findOne({
-        where: { grado, grupo, cohorte, id_institucion: idInstitucion },
-        transaction
-      });
-
-      if (!curso) {
-        throw new Error('El curso no existe');
-      }
-
-      // Validaciones de mínimos
-      if (cantidadPreguntas < 10) {
-        throw new Error('La cantidad mínima de preguntas es 10');
-      }
-
-      if (duracionMinutos < 10) {
-        throw new Error('La duración mínima es 10 minutos');
-      }
-
-      // Crear simulacro
-      const simulacro = await SimulacroGrupal.create({
-        id_docente: idDocente,
-        grado,
-        grupo,
-        cohorte,
-        id_institucion: idInstitucion,
-        cantidad_preguntas: cantidadPreguntas,
-        duracion_minutos: duracionMinutos,
-        estado: 'esperando'
-      }, { transaction });
-
-      // Seleccionar preguntas aleatorias de todas las áreas
-      const preguntas = await this.seleccionarPreguntasAleatorias(cantidadPreguntas, transaction);
-
-      // Asignar preguntas al simulacro
-      for (let i = 0; i < preguntas.length; i++) {
-        await PreguntasSimulacro.create({
-          id_simulacro: simulacro.id_simulacro,
-          id_pregunta: preguntas[i].id_pregunta,
-          orden: i + 1
-        }, { transaction });
-      }
-
-      await transaction.commit();
-
-      return await this.obtenerSimulacroDetalle(simulacro.id_simulacro);
-
-    } catch (error) {
-      if (!transaction.finished) {
-        await transaction.rollback();
-      }
-      throw new Error(`Error al crear simulacro: ${error.message}`);
+    if (!docente) {
+      throw new Error('Usuario no es docente o no existe');
     }
+
+    // Validar curso
+    const curso = await Curso.findOne({
+      where: { grado, grupo, cohorte, id_institucion: idInstitucion },
+      transaction
+    });
+
+    if (!curso) {
+      throw new Error('El curso no existe');
+    }
+
+    // Validaciones mínimas
+    if (cantidadPreguntas < 10) {
+      throw new Error('La cantidad mínima de preguntas es 10');
+    }
+
+    if (duracionMinutos < 10) {
+      throw new Error('La duración mínima es 10 minutos');
+    }
+
+    // 🔍 VALIDACIÓN NUEVA: ¿Hay suficientes preguntas?
+    const totalPreguntas = await Pregunta.count({ transaction });
+
+    if (totalPreguntas < cantidadPreguntas) {
+      throw new Error(
+        `No hay preguntas suficientes en la base de datos (disponibles: ${totalPreguntas}, solicitadas: ${cantidadPreguntas})`
+      );
+    }
+
+    // Crear simulacro
+    const simulacro = await SimulacroGrupal.create({
+      id_docente: idDocente,
+      grado,
+      grupo,
+      cohorte,
+      id_institucion: idInstitucion,
+      cantidad_preguntas: cantidadPreguntas,
+      duracion_minutos: duracionMinutos,
+      estado: 'esperando'
+    }, { transaction });
+
+    // Seleccionar preguntas aleatorias
+    const preguntas = await this.seleccionarPreguntasAleatorias(cantidadPreguntas, transaction);
+
+    // Asignar preguntas al simulacro
+    for (let i = 0; i < preguntas.length; i++) {
+      await PreguntasSimulacro.create({
+        id_simulacro: simulacro.id_simulacro,
+        id_pregunta: preguntas[i].id_pregunta,
+        orden: i + 1
+      }, { transaction });
+    }
+
+    await transaction.commit();
+
+    return await this.obtenerSimulacroDetalle(simulacro.id_simulacro);
+
+  } catch (error) {
+    if (!transaction.finished) {
+      await transaction.rollback();
+    }
+    throw new Error(`Error al crear simulacro: ${error.message}`);
   }
+}
 
   // Seleccionar preguntas aleatorias de todas las áreas con distribución balanceada
   async seleccionarPreguntasAleatorias(cantidad, transaction) {
