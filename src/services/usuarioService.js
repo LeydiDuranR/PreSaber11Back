@@ -312,7 +312,10 @@ export const obtenerCursosDeDocenteService = async (documento) => {
 export const obtenerDocentesPorInstitucion = async (id_institucion) => {
   try {
     const docentes = await Usuario.findAll({
-      where: { id_institucion: id_institucion, id_rol: 2 },
+      where: { 
+        id_institucion: id_institucion, 
+        id_rol: { [Op.in]: [2, 4] } 
+      },
       include: [
         { model: Rol, attributes: ["id_rol", "descripcion"] },
         { model: TipoDocumento, attributes: ["id_tipo_documento", "descripcion"] }
