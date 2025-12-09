@@ -10,6 +10,7 @@ class SimulacroGrupalController {
       // Validaciones
       if (!id_docente || !grado || !grupo || !cohorte || !id_institucion || !cantidad_preguntas || !duracion_minutos) {
         return res.status(400).json({
+          success: false,
           error: 'Faltan datos requeridos'
         });
       }
@@ -25,6 +26,7 @@ class SimulacroGrupalController {
       );
 
       return res.status(201).json({
+        success: true,
         message: 'Simulacro creado exitosamente',
         data: simulacro
       });
@@ -32,6 +34,7 @@ class SimulacroGrupalController {
     } catch (error) {
       console.error('Error al crear simulacro:', error);
       return res.status(500).json({
+        success: false,
         error: error.message
       });
     }
@@ -45,6 +48,7 @@ class SimulacroGrupalController {
 
       if (!id_estudiante) {
         return res.status(400).json({
+          success: false,
           error: 'Falta el ID del estudiante'
         });
       }
@@ -55,6 +59,7 @@ class SimulacroGrupalController {
       );
 
       return res.status(200).json({
+        success: true,
         message: 'Unido al simulacro exitosamente',
         data: simulacro
       });
@@ -62,6 +67,7 @@ class SimulacroGrupalController {
     } catch (error) {
       console.error('Error al unirse al simulacro:', error);
       return res.status(500).json({
+        success: false,
         error: error.message
       });
     }
@@ -75,6 +81,7 @@ class SimulacroGrupalController {
 
       if (!id_docente) {
         return res.status(400).json({
+          success: false,
           error: 'Falta el ID del docente'
         });
       }
@@ -85,6 +92,7 @@ class SimulacroGrupalController {
       );
 
       return res.status(200).json({
+        success: true,
         message: 'Simulacro iniciado exitosamente',
         data: simulacro
       });
@@ -92,6 +100,7 @@ class SimulacroGrupalController {
     } catch (error) {
       console.error('Error al iniciar simulacro:', error);
       return res.status(500).json({
+        success: false,
         error: error.message
       });
     }
@@ -105,12 +114,14 @@ class SimulacroGrupalController {
       const simulacro = await SimulacroGrupalService.obtenerSimulacroDetalle(parseInt(id));
 
       return res.status(200).json({
+        success: true,
         data: simulacro
       });
 
     } catch (error) {
       console.error('Error al obtener simulacro:', error);
       return res.status(500).json({
+        success: false,
         error: error.message
       });
     }
@@ -124,12 +135,14 @@ class SimulacroGrupalController {
       const preguntas = await SimulacroGrupalService.obtenerPreguntasSimulacro(parseInt(id));
 
       return res.status(200).json({
+        success: true,
         data: preguntas
       });
 
     } catch (error) {
       console.error('Error al obtener preguntas:', error);
       return res.status(500).json({
+        success: false,
         error: error.message
       });
     }
@@ -143,6 +156,7 @@ class SimulacroGrupalController {
 
       if (!id_estudiante || !id_pregunta || !id_opcion || tiempo_respuesta === undefined) {
         return res.status(400).json({
+          success: false,
           error: 'Faltan datos requeridos'
         });
       }
@@ -156,6 +170,7 @@ class SimulacroGrupalController {
       );
 
       return res.status(200).json({
+        success: true,
         message: 'Respuesta guardada',
         data: resultado
       });
@@ -163,6 +178,7 @@ class SimulacroGrupalController {
     } catch (error) {
       console.error('Error al guardar respuesta:', error);
       return res.status(500).json({
+        success: false,
         error: error.message
       });
     }
@@ -176,6 +192,7 @@ class SimulacroGrupalController {
 
       if (!id_estudiante) {
         return res.status(400).json({
+          success: false,
           error: 'Falta el ID del estudiante'
         });
       }
@@ -186,6 +203,7 @@ class SimulacroGrupalController {
       );
 
       return res.status(200).json({
+        success: true,
         message: 'Participación finalizada',
         data: resultado
       });
@@ -193,6 +211,7 @@ class SimulacroGrupalController {
     } catch (error) {
       console.error('Error al finalizar participación:', error);
       return res.status(500).json({
+        success: false,
         error: error.message
       });
     }
@@ -206,6 +225,7 @@ class SimulacroGrupalController {
 
       if (!id_docente) {
         return res.status(400).json({
+          success: false,
           error: 'Falta el ID del docente'
         });
       }
@@ -216,6 +236,7 @@ class SimulacroGrupalController {
       );
 
       return res.status(200).json({
+        success: true,
         message: 'Simulacro finalizado',
         data: resultado
       });
@@ -223,6 +244,7 @@ class SimulacroGrupalController {
     } catch (error) {
       console.error('Error al finalizar simulacro:', error);
       return res.status(500).json({
+        success: false,
         error: error.message
       });
     }
@@ -236,12 +258,14 @@ class SimulacroGrupalController {
       const resultado = await SimulacroGrupalService.obtenerResultadoSimulacro(parseInt(id));
 
       return res.status(200).json({
+        success: true,
         data: resultado
       });
 
     } catch (error) {
       console.error('Error al obtener resultado:', error);
       return res.status(500).json({
+        success: false,
         error: error.message
       });
     }
@@ -255,12 +279,14 @@ class SimulacroGrupalController {
       const progreso = await SimulacroGrupalService.obtenerProgreso(parseInt(id));
 
       return res.status(200).json({
+        success: true,
         data: progreso
       });
 
     } catch (error) {
       console.error('Error al obtener progreso:', error);
       return res.status(500).json({
+        success: false,
         error: error.message
       });
     }
@@ -279,12 +305,14 @@ class SimulacroGrupalController {
       );
 
       return res.status(200).json({
+        success: true,
         data: simulacros
       });
 
     } catch (error) {
       console.error('Error al obtener simulacros del curso:', error);
       return res.status(500).json({
+        success: false,
         error: error.message
       });
     }
@@ -298,12 +326,14 @@ class SimulacroGrupalController {
       const historial = await SimulacroGrupalService.obtenerHistorialEstudiante(id_estudiante);
 
       return res.status(200).json({
+        success: true,
         data: historial
       });
 
     } catch (error) {
       console.error('Error al obtener historial:', error);
       return res.status(500).json({
+        success: false,
         error: error.message
       });
     }
