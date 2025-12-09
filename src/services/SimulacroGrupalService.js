@@ -1,6 +1,7 @@
 import { admin } from "../config/firebase.js";
 import SimulacroGrupal from '../models/SimulacroGrupal.js';
 import ParticipanteSimulacro from '../models/ParticipanteSimulacro.js';
+import Participante from '../models/Participante.js';
 import PreguntasSimulacro from '../models/PreguntasSimulacro.js';
 import RespuestaSimulacro from '../models/RespuestaSimulacro.js';
 import Pregunta from '../models/Pregunta.js';
