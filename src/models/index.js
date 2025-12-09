@@ -21,5 +21,10 @@ import "./ParticipanteSala.js";
 import "./RespuestaSalaPvP.js";
 import "./PreguntasSala.js";
 
+import "./SimulacroGrupal.js";
+import "./ParticipanteSimulacro.js";
+import "./PreguntasSimulacro.js";
+import "./RespuestaSimulacro.js";
+
 
 console.log("✅ Todos los modelos cargados correctamente");
