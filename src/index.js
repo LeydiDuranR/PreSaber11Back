@@ -14,7 +14,8 @@ import opcionRoutes from "./routes/OpcionRoutes.js";
 import institucionRoutes from "./routes/institucionRoutes.js";
 import RetoRoutes from "./routes/RetoRoutes.js";
 import salaPrivadaRoutes from './routes/salaPrivadaRoutes.js';
-
+import simulacroRoutes from './routes/SimulacroRoutes.js';
+import sesionRoutes from "./routes/SesionRoutes.js";
 dotenv.config();
 
 
@@ -36,7 +37,7 @@ app.use(express.json());
 })();
 
 app.use("/api/curso", cursoRoutes);
-app.use("/api/institucion", institucionRoutes); 
+app.use("/api/institucion", institucionRoutes);
 app.use("/api/usuarios", usuarioRoutes);
 app.use("/api/tipos-documento", tipoDocumentoRoutes);
 app.use("/api/areas", areaRoutes);
@@ -45,6 +46,8 @@ app.use("/api/temas", temaRoutes);
 app.use("/api/opciones", opcionRoutes);
 app.use("/api/retos", RetoRoutes);
 app.use('/api/salas', salaPrivadaRoutes);
+app.use("/api/simulacros", simulacroRoutes);
+app.use("/api/sesiones", sesionRoutes);
 
 // Ruta base
 app.get("/", (req, res) => {
