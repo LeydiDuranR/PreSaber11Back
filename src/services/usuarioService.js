@@ -251,10 +251,28 @@ export const obtenerUsuarioPorIdService = async (documento) => {
 };
 
 export const obtenerUsuarioPorUidFirebase = async (uid_firebase) => {
-  const usuario = await Usuario.findOne({ where: { uid_firebase } });
+  const usuario = await Usuario.findOne({
+    where: { uid_firebase }
+  });
+
   if (!usuario) throw new Error("Usuario no encontrado.");
-  return usuario;
+
+  const participante = await Participante.findOne({
+    where: { documento_participante: usuario.documento },
+    attributes: ["grado", "grupo", "cohorte", "id_institucion"]
+  });
+
+  // Convertir usuario a JSON normal
+  const userJSON = usuario.toJSON();
+
+  return {
+    ...userJSON,
+    grado: participante?.grado || null,
+    grupo: participante?.grupo || null,
+    cohorte: participante?.cohorte || null,
+  };
 };
+
 
 export const obtenerTodosUsuariosService = async () => {
   return await Usuario.findAll({ include: ["rol", "tipo_documento"] });

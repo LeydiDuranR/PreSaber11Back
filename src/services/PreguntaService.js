@@ -256,11 +256,23 @@ async function crearPreguntasLote(preguntasArray, filesMap = {}) {
     }
 }
 
-async function editarPreguntaConOpciones({ id_pregunta, enunciado, nivel_dificultad, id_area, id_tema, file, eliminar_imagen = false, opciones }) {
-    const t = await db.transaction();
+async function editarPreguntaConOpciones({ 
+    id_pregunta, 
+    enunciado, 
+    nivel_dificultad, 
+    id_area, 
+    id_tema, 
+    file, 
+    eliminar_imagen = false, 
+    opciones 
+}) {
+    let transaction;
+    
     try {
+        transaction = await db.transaction();
+        
         // Editar la pregunta principal
-        const pregunta = await editarPregunta(
+        await editarPregunta(
             id_pregunta,
             enunciado,
             file,
@@ -268,7 +280,7 @@ async function editarPreguntaConOpciones({ id_pregunta, enunciado, nivel_dificul
             id_area,
             id_tema,
             eliminar_imagen,
-            { transaction: t }
+            { transaction }
         );
 
         // Editar cada opción
@@ -281,18 +293,39 @@ async function editarPreguntaConOpciones({ id_pregunta, enunciado, nivel_dificul
                     op.es_correcta,
                     id_pregunta,
                     op.eliminar_imagen ?? false,
-                    { transaction: t }
+                    { transaction }
                 );
             }
         }
 
-        await t.commit();
+        await transaction.commit();
+        transaction = null;
+        
+        const preguntaActualizada = await Pregunta.findByPk(id_pregunta, { 
+            include: [
+                { model: Opcion, as: 'opciones' },
+                { model: Area, as: 'area' },
+                { model: Tema, as: 'tema' }
+            ] 
+        });
 
-        return await Pregunta.findByPk(id_pregunta, { include: [Opcion] });
+        return preguntaActualizada || { 
+            id_pregunta, 
+            mensaje: 'Pregunta actualizada exitosamente' 
+        };
 
     } catch (error) {
-        await t.rollback();
-        throw new Error(error.message);
+        // Solo hacer rollback si la transacción aún existe
+        if (transaction) {
+            try {
+                await transaction.rollback();
+            } catch (rollbackError) {
+                console.error('Error al hacer rollback:', rollbackError);
+            }
+        }
+        
+        console.error('Error editando pregunta:', error);
+        throw new Error(`Error al editar pregunta: ${error.message}`);
     }
 }
 
