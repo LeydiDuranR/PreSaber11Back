@@ -208,19 +208,12 @@ export const obtenerRanking = async (req, res) => {
 // PATCH /api/cursos/configuracion
 export const actualizarConfiguracion = async (req, res) => {
   try {
-    const { grado, grupo, cohorte, id_institucion, ...datos } = req.body;
+    const { grado, grupo, cohorte, id_institucion, id_docente, ...datos } = req.body;
 
     if (!grado || !grupo || !cohorte || !id_institucion) {
       return res.status(400).json({
         success: false,
-        error: 'Faltan datos requeridos: grado, grupo, cohorte, id_institucion'
-      });
-    }
-
-    if (Object.keys(datos).length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'No se proporcionaron datos para actualizar'
+        error: "Faltan datos requeridos"
       });
     }
 
@@ -229,20 +222,21 @@ export const actualizarConfiguracion = async (req, res) => {
       grupo,
       parseInt(cohorte),
       parseInt(id_institucion),
-      datos
+      id_docente,   // el docente nuevo (si lo envían)
+      datos         // clave_acceso y habilitado
     );
 
     return res.status(200).json({
       success: true,
-      message: 'Curso actualizado exitosamente',
+      message: "Curso actualizado correctamente",
       data: cursoActualizado
     });
 
   } catch (error) {
-    console.error('Error al actualizar curso:', error);
+    console.error("Error:", error);
     return res.status(500).json({
       success: false,
       error: error.message
     });
   }
-}
+};

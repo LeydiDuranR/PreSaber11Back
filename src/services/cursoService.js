@@ -1,12 +1,12 @@
 import Curso from "../models/Curso.js";
 import Institucion from "../models/Institucion.js";
 import Area from "../models/Area.js";
-import SimulacroGrupal from "../models/SimulacroGrupal.js";
 import ParticipanteSimulacro from "../models/ParticipanteSimulacro.js";
 import Participante from "../models/Participante.js";
 import Usuario from "../models/Usuario.js";
 import Rol from "../models/Rol.js";
 import db from "../db/db.js";
+import { Op } from "sequelize";
 import {admin} from "../config/firebase.js";
 
 export const verificarCurso = async (grado, grupo, cohorte, id_institucion, clave_acceso) => {
@@ -68,7 +68,7 @@ export const listarCursosPorInstituciones = async (id_institucion) => {
         const docente = await Usuario.findOne({
           where: {
             documento: documentos,
-            id_rol: 2
+            id_rol: { [Op.in]: [2, 4] }
           },
           attributes: ["documento", "nombre", "apellido", "correo"],
           include: [
@@ -449,30 +449,94 @@ export const obtenerRankingEstudiantes = async (grado, grupo, cohorte, idInstitu
 }
 
 // Actualizar configuración del curso
-export const actualizarCurso = async (grado, grupo, cohorte, idInstitucion, datos) => {
+export const actualizarCurso = async (grado, grupo, cohorte, idInstitucion, id_docente, datos) => {
   const transaction = await db.transaction();
 
   try {
+    // Verificar curso
     const curso = await Curso.findOne({
       where: { grado, grupo, cohorte, id_institucion: idInstitucion },
       transaction
     });
 
-    if (!curso) {
-      throw new Error('Curso no encontrado');
-    }
+    if (!curso) throw new Error("Curso no encontrado");
 
-    // Campos permitidos para actualizar
-    const camposPermitidos = ['clave_acceso', 'habilitado'];
+    // -----------------------------------
+    // 1. Actualizar datos permitidos
+    // -----------------------------------
+    const camposPermitidos = ["clave_acceso", "habilitado"];
     const datosActualizar = {};
 
     camposPermitidos.forEach(campo => {
-      if (datos[campo] !== undefined) {
-        datosActualizar[campo] = datos[campo];
-      }
+      if (datos[campo] !== undefined) datosActualizar[campo] = datos[campo];
     });
 
     await curso.update(datosActualizar, { transaction });
+
+    // -----------------------------------
+    // 2. CAMBIO DE DOCENTE
+    // -----------------------------------
+    if (id_docente) {
+
+      // Validar que exista y sea docente/director
+      const docenteNuevo = await Usuario.findOne({
+        where: {
+          documento: id_docente,
+          id_rol: { [Op.in]: [2, 4] }
+        },
+        transaction
+      });
+
+      if (!docenteNuevo) throw new Error("El docente no existe o no tiene rol válido (2 o 4).");
+
+      // Buscar participantes del curso
+      const participantesCurso = await Participante.findAll({
+        where: { grado, grupo, cohorte, id_institucion: idInstitucion },
+        transaction
+      });
+
+      const documentos = participantesCurso.map(p => p.documento_participante);
+
+      // Detectar docente actual
+      const docenteAnterior = await Usuario.findOne({
+        where: {
+          documento: documentos,
+          id_rol: { [Op.in]: [2, 4] }
+        },
+        transaction
+      });
+
+      // Si existe docente anterior → eliminarlo
+      if (docenteAnterior) {
+        await Participante.destroy({
+          where: {
+            documento_participante: docenteAnterior.documento,
+            grado, grupo, cohorte, id_institucion: idInstitucion
+          },
+          transaction
+        });
+      }
+
+      // Verificar si el nuevo ya está como participante
+      const yaParticipa = await Participante.findOne({
+        where: {
+          documento_participante: docenteNuevo.documento,
+          grado, grupo, cohorte, id_institucion: idInstitucion
+        },
+        transaction
+      });
+
+      // Si no está → agregarlo
+      if (!yaParticipa) {
+        await Participante.create({
+          documento_participante: docenteNuevo.documento,
+          grado,
+          grupo,
+          cohorte,
+          id_institucion: idInstitucion
+        }, { transaction });
+      }
+    }
 
     await transaction.commit();
 
@@ -481,11 +545,12 @@ export const actualizarCurso = async (grado, grupo, cohorte, idInstitucion, dato
       grupo: curso.grupo,
       cohorte: curso.cohorte,
       clave_acceso: curso.clave_acceso,
+      docente: id_docente || null,
       habilitado: curso.habilitado
     };
 
   } catch (error) {
     await transaction.rollback();
-    throw new Error(`Error al actualizar curso: ${error.message}`);
+    throw new Error(error.message);
   }
-}
+};
