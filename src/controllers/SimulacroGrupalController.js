@@ -5,9 +5,17 @@ class SimulacroGrupalController {
   // POST /api/simulacro-grupal/crear
   async crearSimulacro(req, res) {
     try {
-      const { id_docente, grado, grupo, cohorte, id_institucion, cantidad_preguntas, duracion_minutos } = req.body;
+      const {
+        id_docente,
+        grado,
+        grupo,
+        cohorte,
+        id_institucion,
+        cantidad_preguntas,
+        duracion_minutos
+      } = req.body;
 
-      // Validaciones
+      // Validaciones de campos requeridos
       if (!id_docente || !grado || !grupo || !cohorte || !id_institucion || !cantidad_preguntas || !duracion_minutos) {
         return res.status(400).json({
           success: false,
@@ -15,6 +23,7 @@ class SimulacroGrupalController {
         });
       }
 
+      // Llamar al servicio
       const simulacro = await SimulacroGrupalService.crearSimulacro(
         id_docente,
         grado,
@@ -32,10 +41,26 @@ class SimulacroGrupalController {
       });
 
     } catch (error) {
-      console.error('Error al crear simulacro:', error);
+      console.error('Error al crear simulacro:', error.message);
+
+      // ⚠️ ERRORES CONTROLADOS DEL SERVICIO
+      if (
+        error.message.includes('No hay preguntas suficientes') ||
+        error.message.includes('cantidad mínima') ||
+        error.message.includes('duración mínima') ||
+        error.message.includes('docente') ||
+        error.message.includes('curso')
+      ) {
+        return res.status(400).json({
+          success: false,
+          error: error.message
+        });
+      }
+
+      // ⚠️ ERROR INTERNO — no controlado
       return res.status(500).json({
         success: false,
-        error: error.message
+        error: 'Error del servidor: ' + error.message
       });
     }
   }
