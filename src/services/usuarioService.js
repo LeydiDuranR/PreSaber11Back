@@ -273,7 +273,6 @@ export const obtenerUsuarioPorUidFirebase = async (uid_firebase) => {
   };
 };
 
-
 export const obtenerTodosUsuariosService = async () => {
   return await Usuario.findAll({ include: ["rol", "tipo_documento"] });
 };
@@ -283,6 +282,31 @@ export const verificarUsuarioPorUidService = async (uid_firebase) => {
   return usuario;
 };
 
+export const obtenerCursosDeDocenteService = async (documento) => {
+
+  // Buscar usuario normal con findOne
+  const usuario = await Usuario.findOne({
+    where: { documento }
+  });
+
+  if (!usuario) {
+    throw new Error("Usuario no encontrado.");
+  }
+
+  // Validar que sea docente (2) o director (4)
+  if (usuario.id_rol !== 2 && usuario.id_rol !== 4) {
+    throw new Error("El usuario no tiene permisos. Debe ser docente o director.");
+  }
+
+  // Buscar todas las participaciones del usuario con findAll
+  const participaciones = await Participante.findAll({
+    where: { documento_participante: documento },
+    attributes: ["grado", "grupo", "cohorte", "id_institucion"]
+  });
+
+  // Retornar solo el array de participantes
+  return participaciones;
+};
 
 /** Obtener todos los docentes (id_rol = 2) **/
 export const obtenerDocentesPorInstitucion = async (id_institucion) => {
