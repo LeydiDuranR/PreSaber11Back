@@ -1,6 +1,14 @@
 import {
-  obtenerCursos, verificarCurso, crearCurso, listarCursosPorInstituciones,
-  obtenerCursosPorInstitucion, actualizarEstadoCurso
+  obtenerCursos, 
+  verificarCurso, 
+  crearCurso, 
+  listarCursosPorInstituciones,
+  obtenerCursosPorInstitucion, 
+  actualizarEstadoCurso, 
+  actualizarCurso,
+  obtenerParticipantesCurso,
+  obtenerPromediosPorArea,
+  obtenerRankingEstudiantes,
 } from "../services/cursoService.js";
 
 export const verificarCursoClave = async (req, res) => {
@@ -95,5 +103,140 @@ export const actualizarEstadoCursoController = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+// GET /api/cursos/participantes
+export const obtenerParticipantes = async (req, res) => {
+  try {
+    const { grado, grupo, cohorte, id_institucion } = req.body;
+
+    if (!grado || !grupo || !cohorte || !id_institucion) {
+      return res.status(400).json({
+        success: false,
+        error: 'Faltan datos requeridos: grado, grupo, cohorte, id_institucion'
+      });
+    }
+
+    const participantes = await obtenerParticipantesCurso(
+      grado,
+      grupo,
+      parseInt(cohorte),
+      parseInt(id_institucion)
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: participantes
+    });
+
+  } catch (error) {
+    console.error('Error al obtener participantes:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+}
+
+// POST /api/cursos/promedios
+export const obtenerPromedios = async (req, res) => {
+  try {
+    const { grado, grupo, cohorte, id_institucion } = req.body;
+
+    if (!grado || !grupo || !cohorte || !id_institucion) {
+      return res.status(400).json({
+        success: false,
+        error: 'Faltan datos requeridos: grado, grupo, cohorte, id_institucion'
+      });
+    }
+
+    const promedios = await obtenerPromediosPorArea(
+      grado,
+      grupo,
+      parseInt(cohorte),
+      parseInt(id_institucion)
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: promedios
+    });
+
+  } catch (error) {
+    console.error('Error al obtener promedios:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+}
+
+// POST /api/cursos/ranking
+export const obtenerRanking = async (req, res) => {
+  try {
+    const { grado, grupo, cohorte, id_institucion } = req.body;
+
+    if (!grado || !grupo || !cohorte || !id_institucion) {
+      return res.status(400).json({
+        success: false,
+        error: 'Faltan datos requeridos: grado, grupo, cohorte, id_institucion'
+      });
+    }
+
+    const ranking = await obtenerRankingEstudiantes(
+      grado,
+      grupo,
+      parseInt(cohorte),
+      parseInt(id_institucion)
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: ranking
+    });
+
+  } catch (error) {
+    console.error('Error al obtener ranking:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+}
+
+// PATCH /api/cursos/configuracion
+export const actualizarConfiguracion = async (req, res) => {
+  try {
+    const { grado, grupo, cohorte, id_institucion, id_docente, ...datos } = req.body;
+
+    if (!grado || !grupo || !cohorte || !id_institucion) {
+      return res.status(400).json({
+        success: false,
+        error: "Faltan datos requeridos"
+      });
+    }
+
+    const cursoActualizado = await actualizarCurso(
+      grado,
+      grupo,
+      parseInt(cohorte),
+      parseInt(id_institucion),
+      id_docente,   // el docente nuevo (si lo envían)
+      datos         // clave_acceso y habilitado
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Curso actualizado correctamente",
+      data: cursoActualizado
+    });
+
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
 };

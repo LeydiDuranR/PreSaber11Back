@@ -9,7 +9,8 @@ import {
   buscarDocentePorNombre,
   verificarUsuarioExistenteService,
   obtenerUsuarioPorUidFirebase,
-  crearDocenteService
+  crearDocenteService,
+  obtenerCursosDeDocenteService
 } from "../services/usuarioService.js";
 
 export const crearUsuario = async (req, res) => {
@@ -139,6 +140,25 @@ export const obtenerTodosUsuarios = async (req, res) => {
   }
 };
 
+export const obtenerCursosDocente = async (req, res) => {
+  try {
+    const { documento } = req.params;
+
+    const cursos = await obtenerCursosDeDocenteService(documento);
+
+    return res.status(200).json({
+      success: true,
+      data: cursos
+    });
+
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      error: error.message
+    });
+  }
+}
+
 export const verificarUsuarioPorUid = async (req, res) => {
   try {
     const { uid_firebase } = req.params;
@@ -154,7 +174,6 @@ export const verificarUsuarioPorUid = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
 
 export const obtenerDocentesInstitucion = async (req, res) => {
   try {
