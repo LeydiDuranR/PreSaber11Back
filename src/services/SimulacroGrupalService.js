@@ -16,13 +16,13 @@ class SimulacroGrupalService {
   // Sistema de experiencia según dificultad
   obtenerPuntosExperiencia(nivelDificultad, esCorrecta) {
     if (!esCorrecta) return 0;
-    
+
     const pesos = {
       'bajo': 5,
       'medio': 10,
       'alto': 15
     };
-    
+
     return pesos[nivelDificultad.toLowerCase()] || 10;
   }
 
@@ -104,7 +104,7 @@ class SimulacroGrupalService {
     try {
       // Obtener todas las áreas
       const areas = await Area.findAll({ transaction });
-      
+
       if (areas.length === 0) {
         throw new Error('No hay áreas disponibles');
       }
@@ -118,7 +118,7 @@ class SimulacroGrupalService {
       // Seleccionar preguntas de cada área
       for (let i = 0; i < areas.length; i++) {
         const cantidadParaEstaArea = preguntasPorArea + (i < preguntasExtra ? 1 : 0);
-        
+
         // Obtener preguntas de diferentes niveles de dificultad
         const preguntasDelArea = await Pregunta.findAll({
           where: { id_area: areas[i].id_area },
@@ -133,7 +133,7 @@ class SimulacroGrupalService {
       // Si no alcanzamos la cantidad, completar con preguntas aleatorias
       if (preguntasSeleccionadas.length < cantidad) {
         const idsYaSeleccionados = preguntasSeleccionadas.map(p => p.id_pregunta);
-        
+
         const preguntasAdicionales = await Pregunta.findAll({
           where: {
             id_pregunta: { [Op.notIn]: idsYaSeleccionados }
@@ -174,11 +174,22 @@ class SimulacroGrupalService {
         throw new Error('El simulacro ya no está disponible para unirse');
       }
 
-      // Verificar que el estudiante pertenezca al curso
       const estudiante = await Usuario.findOne({
         where: {
           documento: idEstudiante,
-          id_rol: 3, // Rol estudiante
+          id_rol: 3
+        },
+        transaction
+      });
+
+      if (!estudiante) {
+        throw new Error('El estudiante no existe o no es un estudiante');
+      }
+
+      // Verificar participación en el curso
+      const participante = await Participante.findOne({
+        where: {
+          documento_participante: idEstudiante,
           grado: simulacro.grado,
           grupo: simulacro.grupo,
           cohorte: simulacro.cohorte,
@@ -187,7 +198,7 @@ class SimulacroGrupalService {
         transaction
       });
 
-      if (!estudiante) {
+      if (!participante) {
         throw new Error('El estudiante no pertenece a este curso');
       }
 
@@ -427,7 +438,7 @@ class SimulacroGrupalService {
     try {
       // Obtener la pregunta para conocer el nivel de dificultad
       const pregunta = await Pregunta.findByPk(idPregunta, { transaction });
-      
+
       if (!pregunta) {
         throw new Error('Pregunta no encontrada');
       }
@@ -556,7 +567,7 @@ class SimulacroGrupalService {
 
       // Finalizar participantes que aún no han terminado
       await ParticipanteSimulacro.update(
-        { 
+        {
           estado_jugador: 'finalizado',
           fecha_finalizacion: new Date()
         },
@@ -611,16 +622,16 @@ class SimulacroGrupalService {
       const participantesOrdenados = simulacro.participantes.sort((a, b) => {
         const puntajeA = Number(a.puntaje_final) || 0;
         const puntajeB = Number(b.puntaje_final) || 0;
-        
+
         // Si los puntajes son diferentes, ordenar por puntaje
         if (puntajeA !== puntajeB) {
           return puntajeB - puntajeA;
         }
-        
+
         // Si hay empate, ordenar por quien terminó primero
         const fechaA = a.fecha_finalizacion ? new Date(a.fecha_finalizacion).getTime() : Infinity;
         const fechaB = b.fecha_finalizacion ? new Date(b.fecha_finalizacion).getTime() : Infinity;
-        
+
         return fechaA - fechaB;
       });
 
