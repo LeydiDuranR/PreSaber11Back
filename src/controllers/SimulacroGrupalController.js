@@ -43,7 +43,6 @@ class SimulacroGrupalController {
     } catch (error) {
       console.error('Error al crear simulacro:', error.message);
 
-      // ⚠️ ERRORES CONTROLADOS DEL SERVICIO
       if (
         error.message.includes('No hay preguntas suficientes') ||
         error.message.includes('cantidad mínima') ||
@@ -57,7 +56,6 @@ class SimulacroGrupalController {
         });
       }
 
-      // ⚠️ ERROR INTERNO — no controlado
       return res.status(500).json({
         success: false,
         error: 'Error del servidor: ' + error.message

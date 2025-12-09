@@ -554,7 +554,7 @@ async crearSimulacro(idDocente, grado, grupo, cohorte, idInstitucion, cantidadPr
   }
 
   // Finalizar simulacro completo (solo docente)
-  async finalizarSimulacro(idSimulacro, idDocente) {
+async finalizarSimulacro(idSimulacro, idDocente) {
     const transaction = await db.transaction();
 
     try {
@@ -569,33 +569,47 @@ async crearSimulacro(idDocente, grado, grupo, cohorte, idInstitucion, cantidadPr
         throw new Error('Solo el docente creador puede finalizar el simulacro');
       }
 
-      // Actualizar estado del simulacro
+      // 1. Actualizar estado del simulacro a finalizado
+      const fechaCierre = new Date();
       await simulacro.update({
         estado: 'finalizado',
-        fecha_finalizacion: new Date()
+        fecha_finalizacion: fechaCierre
       }, { transaction });
 
-      // Finalizar participantes que aún no han terminado
-      await ParticipanteSimulacro.update(
-        {
-          estado_jugador: 'finalizado',
-          fecha_finalizacion: new Date()
+      // 2. Buscar participantes que NO han finalizado (para calcularles su nota parcial)
+      const participantesPendientes = await ParticipanteSimulacro.findAll({
+        where: {
+          id_simulacro: idSimulacro,
+          estado_jugador: { [Op.ne]: 'finalizado' } // Op.ne significa "Not Equal" (No igual)
         },
-        {
-          where: {
-            id_simulacro: idSimulacro,
-            estado_jugador: { [Op.ne]: 'finalizado' }
-          },
-          transaction
-        }
-      );
+        transaction
+      });
+
+      // 3. Calcular puntaje y finalizar a cada uno
+      // Usamos Promise.all para que las actualizaciones se hagan en paralelo y sea rápido
+      await Promise.all(participantesPendientes.map(async (participante) => {
+        const totalPreguntas = simulacro.cantidad_preguntas;
+        
+        // Calculamos el puntaje basado en lo que lleven correcto hasta el momento
+        const puntajeCalculado = totalPreguntas > 0
+          ? (participante.preguntas_correctas / totalPreguntas) * 100
+          : 0;
+
+        return participante.update({
+          estado_jugador: 'finalizado',
+          fecha_finalizacion: fechaCierre,
+          puntaje_final: puntajeCalculado.toFixed(2) // Guardamos el puntaje calculado, nunca null
+        }, { transaction });
+      }));
 
       await transaction.commit();
 
       return await this.obtenerResultadoSimulacro(idSimulacro);
 
     } catch (error) {
-      await transaction.rollback();
+      if (!transaction.finished) {
+        await transaction.rollback();
+      }
       throw new Error(`Error al finalizar simulacro: ${error.message}`);
     }
   }
