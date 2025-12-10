@@ -26,7 +26,7 @@ async function obtenerPreguntasParaSesion(id_sesion, id_estudiante) {
 
   let puedeIngresar = true;
   let sesionBloqueada = null;
-
+  let progreso;
   if (simulacro) {
     const sesiones = simulacro.sesions || [];
     const ordenActual = sesion.orden;
@@ -36,6 +36,7 @@ async function obtenerPreguntasParaSesion(id_sesion, id_estudiante) {
         const prog = await ProgresoSesion.findOne({
           where: { id_usuario: id_estudiante, id_sesion: s.id_sesion }
         });
+        progreso = prog;
         if (!prog || !prog.completada) {
           puedeIngresar = false;
           sesionBloqueada = s.nombre;
