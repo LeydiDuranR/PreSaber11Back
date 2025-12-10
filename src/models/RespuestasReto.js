@@ -39,9 +39,11 @@ RespuestasReto.belongsTo(Usuario, {
 // Relacion con Opcion
 Opcion.hasMany(RespuestasReto, {
     foreignKey: "id_opcion",
+    as: "respuestas_reto"
 });
 RespuestasReto.belongsTo(Opcion, {
     foreignKey: "id_opcion",
+    as: "opcion"
 });
 
 export default RespuestasReto;

@@ -19,10 +19,9 @@ const ResultadoSesion = db.define("resultado_sesion", {
     freezeTableName: true
 });
 
-Sesion.hasMany(ResultadoSesion, { foreignKey: "id_sesion" });
-ResultadoSesion.belongsTo(Sesion, { foreignKey: "id_sesion" });
+Sesion.hasMany(ResultadoSesion, { foreignKey: "id_sesion", as: "resultados" });
+ResultadoSesion.belongsTo(Sesion, { foreignKey: "id_sesion", as: "sesion" });
 
-ResultadoSimulacro.hasMany(ResultadoSesion, { foreignKey: "id_resultado_simulacro" });
-ResultadoSesion.belongsTo(ResultadoSimulacro, { foreignKey: "id_resultado_simulacro" });
-
+ResultadoSimulacro.hasMany(ResultadoSesion, { foreignKey: "id_resultado_simulacro", as: "sesiones" });
+ResultadoSesion.belongsTo(ResultadoSimulacro, { foreignKey: "id_resultado_simulacro", as: "resultado_simulacro" });
 export default ResultadoSesion;

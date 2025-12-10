@@ -12,7 +12,7 @@ import db from "../db/db.js";
 class RetoService {
 
     // Listar retos por área
-    async listarRetosPorArea(idArea) {
+  async listarRetosPorArea(idArea) {
         try {
             const retos = await Reto.findAll({
                 include: [
@@ -295,13 +295,13 @@ class RetoService {
       }, { transaction });
 
       // Eliminar respuestas temporales
-      await RespuestasReto.destroy({
+/*       await RespuestasReto.destroy({
         where: {
           id_estudiante: idEstudiante,
           id_reto: idReto
         },
         transaction
-      });
+      }); */
 
       await transaction.commit();
 

@@ -30,7 +30,7 @@ const SesionArea = db.define("sesion_area", {
 Area.hasMany(SesionArea, { foreignKey: "id_area" });
 SesionArea.belongsTo(Area, { foreignKey: "id_area" });
 
-Sesion.hasMany(SesionArea, { foreignKey: "id_sesion" });
-SesionArea.belongsTo(Sesion, { foreignKey: "id_sesion" });
+Sesion.hasMany(SesionArea, { foreignKey: "id_sesion", as: "areas" });
+SesionArea.belongsTo(Sesion, { foreignKey: "id_sesion", as: "sesion" });
 
 export default SesionArea;

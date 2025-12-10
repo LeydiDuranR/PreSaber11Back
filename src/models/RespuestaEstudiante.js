@@ -26,14 +26,14 @@ const RespuestaEstudiante = db.define("respuesta_estudiante", {
 
 //relaciones
 
-ResultadoArea.hasMany(RespuestaEstudiante, { foreignKey: "id_resultado_area" });
-RespuestaEstudiante.belongsTo(ResultadoArea, { foreignKey: "id_resultado_area" });
+ResultadoArea.hasMany(RespuestaEstudiante, { foreignKey: "id_resultado_area", as: "respuestas"});
+RespuestaEstudiante.belongsTo(ResultadoArea, { foreignKey: "id_resultado_area", as: "resultado_area" });
 
-SesionPregunta.hasMany(RespuestaEstudiante, { foreignKey: "id_sesion_pregunta" });
-RespuestaEstudiante.belongsTo(SesionPregunta, { foreignKey: "id_sesion_pregunta" });
+SesionPregunta.hasMany(RespuestaEstudiante, { foreignKey: "id_sesion_pregunta", as: "respuestas" });
+RespuestaEstudiante.belongsTo(SesionPregunta, { foreignKey: "id_sesion_pregunta",as: "sesion_pregunta"  });
 
-Opcion.hasMany(RespuestaEstudiante, { foreignKey: "id_opcion_seleccionada" });
-RespuestaEstudiante.belongsTo(Opcion, { foreignKey: "id_opcion_seleccionada" });
+Opcion.hasMany(RespuestaEstudiante, { foreignKey: "id_opcion_seleccionada", as: "respuestas" });
+RespuestaEstudiante.belongsTo(Opcion, { foreignKey: "id_opcion_seleccionada", as: "opcion" });
 
 
 export default RespuestaEstudiante;
