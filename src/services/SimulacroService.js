@@ -123,22 +123,22 @@ async function obtenerSimulacrosDisponibles(id_estudiante) {
             id_institucion: c.id_institucion
         }));
 
-        // function ahoraColombia() {
-        //     // Obtengo la hora local de Colombia (string)
-        //     const str = new Date().toLocaleString("en-US", { timeZone: "America/Bogota" });
+        function ahoraColombia() {
+            // Obtengo la hora local de Colombia (string)
+            const str = new Date().toLocaleString("en-US", { timeZone: "America/Bogota" });
 
-        //     // Transformo ese string a Date SIN conversión automática a UTC
-        //     const [month, day, year, hour, minute, second] =
-        //         str.match(/\d+/g).map(Number);
+            // Transformo ese string a Date SIN conversión automática a UTC
+            const [month, day, year, hour, minute, second] =
+                str.match(/\d+/g).map(Number);
 
-        //     return new Date(year, month - 1, day, hour, minute, second);
-        // }
+            return new Date(year, month - 1, day, hour, minute, second);
+        }
 
-        // let ahora = ahoraColombia();
+        let ahora = ahoraColombia();
 
         // 3. Buscar los curso_simulacro activos
 
-        let ahora = new Date();
+        // let ahora = new Date();
         const cursoSim = await CursoSimulacro.findAll({
             where: {
                 [Op.or]: condicionesCurso,
