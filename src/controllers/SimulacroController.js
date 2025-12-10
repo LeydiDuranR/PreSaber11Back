@@ -75,32 +75,23 @@ async function crearSimulacro(req, res) {
             });
         }
 
-        if (!datos.duracion_sesion_1 || !datos.duracion_sesion_2) {
-            return res.status(400).json({
-                status: "error",
-                mensaje: "Las duraciones de ambas sesiones son requeridas"
-            });
-        }
+        // Las preguntas son opcionales - se pueden agregar después
+        const tienePreguntas = datos.preguntas_sesion1 && datos.preguntas_sesion2;
 
-        if (!datos.preguntas_sesion1 || !datos.preguntas_sesion2) {
-            return res.status(400).json({
-                status: "error",
-                mensaje: "Las preguntas de ambas sesiones son requeridas"
-            });
-        }
+        // Si se proporcionan preguntas, validar estructura
+        if (tienePreguntas) {
+            const erroresValidacion = SimulacroService.validarEstructuraPreguntas(
+                datos.preguntas_sesion1,
+                datos.preguntas_sesion2
+            );
 
-        // Validar estructura de preguntas
-        const erroresValidacion = SimulacroService.validarEstructuraPreguntas(
-            datos.preguntas_sesion1,
-            datos.preguntas_sesion2
-        );
-
-        if (erroresValidacion.length > 0) {
-            return res.status(400).json({
-                status: "error",
-                mensaje: "Estructura de preguntas inválida según ICFES",
-                errores: erroresValidacion
-            });
+            if (erroresValidacion.length > 0) {
+                return res.status(400).json({
+                    status: "error",
+                    mensaje: "Estructura de preguntas inválida según ICFES",
+                    errores: erroresValidacion
+                });
+            }
         }
 
         // Crear simulacro
@@ -108,7 +99,7 @@ async function crearSimulacro(req, res) {
 
         return res.status(201).json({
             status: "ok",
-            mensaje: "Simulacro creado correctamente",
+            mensaje: resultado.mensaje,
             data: resultado
         });
 
@@ -167,11 +158,11 @@ async function obtenerEstructuraICFES(req, res) {
  */
 async function obtenerTodos(req, res) {
     try {
-        const { activo, page = 1, limit = 10 } = req.query;
+        const { estado, page = 1, limit = 10 } = req.query;
 
         const filtros = {};
-        if (activo !== undefined) {
-            filtros.activo = activo === 'true';
+        if (estado !== undefined) {
+            filtros.estado = estado === 'true';
         }
 
         const simulacros = await SimulacroService.obtenerTodos(filtros, {
@@ -242,7 +233,7 @@ async function obtenerPorId(req, res) {
 async function actualizarSimulacro(req, res) {
     try {
         const { id_simulacro } = req.params;
-        const { nombre, descripcion, activo } = req.body;
+        const { nombre, descripcion, estado } = req.body;
 
         if (!id_simulacro) {
             return res.status(400).json({
@@ -254,7 +245,7 @@ async function actualizarSimulacro(req, res) {
         const resultado = await SimulacroService.actualizarSimulacro(id_simulacro, {
             nombre,
             descripcion,
-            activo
+            estado
         });
 
         return res.status(200).json({
@@ -309,9 +300,113 @@ async function desactivarSimulacro(req, res) {
 
 
 
+/**
+ * Asignar simulacro a cursos
+ * POST /api/simulacros/:id_simulacro/asignar
+ */
+async function asignarSimulacro(req, res) {
+    try {
+        const { id_simulacro } = req.params;
+        const { asignaciones } = req.body;
+
+        if (!asignaciones || !Array.isArray(asignaciones) || asignaciones.length === 0) {
+            return res.status(400).json({
+                status: "error",
+                mensaje: "Debe proporcionar al menos una asignación"
+            });
+        }
+
+        const resultado = await SimulacroService.asignarSimulacroACursos(id_simulacro, asignaciones);
+
+        return res.status(200).json({
+            status: "ok",
+            mensaje: "Simulacro asignado correctamente",
+            data: resultado
+        });
+
+    } catch (error) {
+        console.error("Error en asignarSimulacro:", error);
+        return res.status(500).json({
+            status: "error",
+            mensaje: "Error al asignar simulacro",
+            error: error.message
+        });
+    }
+}
+
+/**
+ * Agregar pregunta a sesión/área
+ * POST /api/simulacros/:id_simulacro/sesiones/:numero_sesion/areas/:id_area/preguntas
+ */
+async function agregarPregunta(req, res) {
+    try {
+        const { id_simulacro, numero_sesion, id_area } = req.params;
+        const { id_pregunta, puntaje_base } = req.body;
+
+        if (!id_pregunta) {
+            return res.status(400).json({
+                status: "error",
+                mensaje: "El id_pregunta es requerido"
+            });
+        }
+
+        const resultado = await SimulacroService.agregarPreguntaASesion(
+            parseInt(id_simulacro),
+            parseInt(numero_sesion),
+            parseInt(id_area),
+            parseInt(id_pregunta),
+            puntaje_base || 0.5
+        );
+
+        return res.status(200).json({
+            status: "ok",
+            ...resultado
+        });
+
+    } catch (error) {
+        console.error("Error en agregarPregunta:", error);
+        return res.status(500).json({
+            status: "error",
+            mensaje: "Error al agregar pregunta",
+            error: error.message
+        });
+    }
+}
+
+/**
+ * Eliminar pregunta de sesión/área
+ * DELETE /api/simulacros/:id_simulacro/sesiones/:numero_sesion/areas/:id_area/preguntas/:id_pregunta
+ */
+async function eliminarPregunta(req, res) {
+    try {
+        const { id_simulacro, numero_sesion, id_area, id_pregunta } = req.params;
+
+        const resultado = await SimulacroService.eliminarPreguntaDeSesion(
+            parseInt(id_simulacro),
+            parseInt(numero_sesion),
+            parseInt(id_area),
+            parseInt(id_pregunta)
+        );
+
+        return res.status(200).json({
+            status: "ok",
+            ...resultado
+        });
+
+    } catch (error) {
+        console.error("Error en eliminarPregunta:", error);
+        return res.status(500).json({
+            status: "error",
+            mensaje: "Error al eliminar pregunta",
+            error: error.message
+        });
+    }
+}
+
 export default {
     obtenerUltimoSimulacro, obtenerDisponibles,
     obtenerResultadosSimulacro, crearSimulacro,
     obtenerEstructuraICFES, obtenerTodos, obtenerPorId,
-    actualizarSimulacro, desactivarSimulacro
+    actualizarSimulacro, desactivarSimulacro,
+    asignarSimulacro, agregarPregunta, eliminarPregunta
 };

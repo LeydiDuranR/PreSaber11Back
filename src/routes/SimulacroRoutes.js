@@ -50,6 +50,31 @@ router.put('/:id_simulacro',
     SimulacroController.actualizarSimulacro
 );
 
+/**
+ * Desactivar un simulacro (soft delete)
+ * DELETE /api/simulacros/:id_simulacro
+ */
+router.delete('/:id_simulacro', 
+    // authMiddleware.verificarAdmin,
+    SimulacroController.desactivarSimulacro
+);
 
+/**
+ * Asignar simulacro a cursos
+ * POST /api/simulacros/:id_simulacro/asignar
+ */
+router.post('/:id_simulacro/asignar', SimulacroController.asignarSimulacro);
+
+/**
+ * Agregar pregunta a sesión/área
+ * POST /api/simulacros/:id_simulacro/sesiones/:numero_sesion/areas/:id_area/preguntas
+ */
+router.post('/:id_simulacro/sesiones/:numero_sesion/areas/:id_area/preguntas', SimulacroController.agregarPregunta);
+
+/**
+ * Eliminar pregunta de sesión/área
+ * DELETE /api/simulacros/:id_simulacro/sesiones/:numero_sesion/areas/:id_area/preguntas/:id_pregunta
+ */
+router.delete('/:id_simulacro/sesiones/:numero_sesion/areas/:id_area/preguntas/:id_pregunta', SimulacroController.eliminarPregunta);
 
 export default router;

@@ -10,6 +10,8 @@ import { Op } from "sequelize";
 import SesionPregunta from "../models/SesionPregunta.js";
 import SesionArea from "../models/SesionArea.js";
 import Area from "../models/Area.js";
+import Pregunta from "../models/Pregunta.js";
+import db from "../db/db.js";
 
 
 async function obtenerUltimoSimulacro(id_usuario) {
@@ -295,7 +297,7 @@ async function obtenerResultadosSimulacro(id_simulacro, id_estudiante) {
         // 6. Calcular porcentajes por área
         const areasDetalle = Object.values(resultadosPorArea).map(area => ({
             ...area,
-            porcentaje: area.puntaje_maximo > 0 
+            porcentaje: area.puntaje_maximo > 0
                 ? Math.round((area.puntaje_obtenido / area.puntaje_maximo) * 100)
                 : 0
         }));
@@ -417,30 +419,29 @@ const ESTRUCTURA_ICFES = [
 
 async function crearSimulacro(datos) {
     const t = await db.transaction();
-    
+
     try {
-        const { 
-            nombre_simulacro, 
-            duracion_sesion_1, 
-            duracion_sesion_2,
+        const {
+            nombre_simulacro,
+            duracion_sesion_1 = 27000, // 7.5 horas por defecto (ICFES)
+            duracion_sesion_2 = 27000,
             preguntas_sesion1,
             preguntas_sesion2
         } = datos;
 
         // Validaciones básicas
-        if (!nombre_simulacro || !duracion_sesion_1 || !duracion_sesion_2) {
-            throw new Error("Faltan datos obligatorios: nombre o duraciones");
+        if (!nombre_simulacro) {
+            throw new Error("El nombre del simulacro es obligatorio");
         }
 
-        if (!preguntas_sesion1 || !preguntas_sesion2) {
-            throw new Error("Faltan las preguntas de las sesiones");
-        }
+        // Las preguntas son opcionales - se pueden agregar después
+        const tienePreguntas = preguntas_sesion1 && preguntas_sesion2;
 
         // 1. Crear el simulacro
         const nuevoSimulacro = await Simulacro.create({
             nombre: nombre_simulacro,
             descripcion: datos.descripcion || null,
-            activo: true,
+            estado: true,
             fecha_creacion: new Date()
         }, { transaction: t });
 
@@ -449,8 +450,8 @@ async function crearSimulacro(datos) {
         // 2. Duraciones por sesión
         const duraciones = [duracion_sesion_1, duracion_sesion_2];
 
-        // 3. Mapeo de preguntas recibidas
-        const preguntasPorSesion = [
+        // 3. Mapeo de preguntas recibidas (si se proporcionan)
+        const preguntasPorSesion = tienePreguntas ? [
             {
                 2: preguntas_sesion1.matematicas || [],      // id_area: 2
                 1: preguntas_sesion1.lectura_critica || [],  // id_area: 1
@@ -463,7 +464,7 @@ async function crearSimulacro(datos) {
                 3: preguntas_sesion2.naturales || [],        // id_area: 3
                 5: preguntas_sesion2.ingles || []            // id_area: 5
             }
-        ];
+        ] : [{}, {}];
 
         // 4. Crear sesiones según estructura ICFES
         for (let i = 0; i < ESTRUCTURA_ICFES.length; i++) {
@@ -476,8 +477,7 @@ async function crearSimulacro(datos) {
                 nombre: estructuraSesion.nombre,
                 orden: estructuraSesion.orden,
                 descripcion: `${estructuraSesion.nombre} - ICFES Saber 11`,
-                duracion_segundos: duraciones[i],
-                activo: true
+                duracion_segundos: duraciones[i]
             }, { transaction: t });
 
             console.log(`✅ ${estructuraSesion.nombre} creada: ${nuevaSesion.id_sesion}`);
@@ -485,74 +485,80 @@ async function crearSimulacro(datos) {
             let ordenGlobalPregunta = 1; // Orden secuencial en toda la sesión
 
             // 5. Crear áreas y asignar preguntas
-            for (const areaConfig of estructuraSesion.areas) {
+            for (let index = 0; index < estructuraSesion.areas.length; index++) {
+                const areaConfig = estructuraSesion.areas[index];
                 const { id_area, nombre, cantidad } = areaConfig;
 
                 // Crear SesionArea
                 const nuevaSesionArea = await SesionArea.create({
                     id_sesion: nuevaSesion.id_sesion,
                     id_area: id_area,
-                    nombre: nombre
+                    orden_area: index + 1,
+                    cantidad_preguntas: tienePreguntas ? cantidad : 0
                 }, { transaction: t });
 
-                // Obtener preguntas para esta área
-                const preguntasArea = preguntasSesion[id_area] || [];
+                // Obtener preguntas para esta área (si se proporcionaron)
+                const preguntasArea = tienePreguntas ? (preguntasSesion[id_area] || []) : [];
 
-                // Validar cantidad de preguntas
-                if (preguntasArea.length !== cantidad) {
+                // Si se proporcionaron preguntas, validar cantidad
+                if (tienePreguntas && preguntasArea.length !== cantidad) {
                     throw new Error(
                         `${estructuraSesion.nombre} - ${nombre}: ` +
                         `Se esperaban ${cantidad} preguntas, pero se recibieron ${preguntasArea.length}`
                     );
                 }
 
-                console.log(`  📝 Procesando ${nombre}: ${preguntasArea.length} preguntas`);
+                if (tienePreguntas) {
+                    console.log(`  📝 Procesando ${nombre}: ${preguntasArea.length} preguntas`);
 
-                // Validar que todas las preguntas existan y sean del área correcta
-                for (const id_pregunta of preguntasArea) {
-                    const pregunta = await Pregunta.findByPk(id_pregunta, { transaction: t });
-                    
-                    if (!pregunta) {
-                        throw new Error(`La pregunta ${id_pregunta} no existe en la base de datos`);
+                    // Validar que todas las preguntas existan y sean del área correcta
+                    for (const id_pregunta of preguntasArea) {
+                        const pregunta = await Pregunta.findByPk(id_pregunta, { transaction: t });
+
+                        if (!pregunta) {
+                            throw new Error(`La pregunta ${id_pregunta} no existe en la base de datos`);
+                        }
+
+                        if (pregunta.id_area !== id_area) {
+                            throw new Error(
+                                `La pregunta ${id_pregunta} pertenece al área ${pregunta.id_area}, ` +
+                                `no al área ${id_area} (${nombre})`
+                            );
+                        }
+
+                        // Crear SesionPregunta
+                        await SesionPregunta.create({
+                            id_sesion_area: nuevaSesionArea.id_sesion_area,
+                            id_pregunta: id_pregunta,
+                            orden_en_sesion: ordenGlobalPregunta,
+                            puntaje_base: 0.5 // Puntaje base por defecto
+                        }, { transaction: t });
+
+                        ordenGlobalPregunta++;
                     }
 
-                    if (pregunta.id_area !== id_area) {
-                        throw new Error(
-                            `La pregunta ${id_pregunta} pertenece al área ${pregunta.id_area}, ` +
-                            `no al área ${id_area} (${nombre})`
-                        );
-                    }
-
-                    // Crear SesionPregunta
-                    await SesionPregunta.create({
-                        id_sesion_area: nuevaSesionArea.id_sesion_area,
-                        id_pregunta: id_pregunta,
-                        orden_en_sesion: ordenGlobalPregunta,
-                        puntaje_base: 1.0 // Puntaje estándar ICFES
-                    }, { transaction: t });
-
-                    ordenGlobalPregunta++;
+                    console.log(`  ✅ ${nombre}: ${preguntasArea.length} preguntas asignadas`);
+                } else {
+                    console.log(`  📝 ${nombre}: estructura creada (sin preguntas aún)`);
                 }
-
-                console.log(`  ✅ ${nombre}: ${preguntasArea.length} preguntas asignadas`);
             }
+
+            await t.commit();
+
+            console.log(`🎉 Simulacro "${nombre_simulacro}" creado exitosamente`);
+
+            return {
+                status: "ok",
+                mensaje: tienePreguntas ? "Simulacro creado exitosamente con todas las preguntas" : "Simulacro creado exitosamente (estructura base)",
+                simulacro: {
+                    id_simulacro: nuevoSimulacro.id_simulacro,
+                    nombre: nombre_simulacro,
+                    sesion1_preguntas: tienePreguntas ? 120 : 0,
+                    sesion2_preguntas: tienePreguntas ? 134 : 0,
+                    total_preguntas: tienePreguntas ? 254 : 0
+                }
+            };
         }
-
-        await t.commit();
-
-        console.log(`🎉 Simulacro "${nombre_simulacro}" creado exitosamente`);
-
-        return {
-            status: "ok",
-            mensaje: "Simulacro creado exitosamente",
-            simulacro: {
-                id_simulacro: nuevoSimulacro.id_simulacro,
-                nombre: nombre_simulacro,
-                sesion1_preguntas: 120,
-                sesion2_preguntas: 134,
-                total_preguntas: 254
-            }
-        };
 
     } catch (error) {
         await t.rollback();
@@ -600,6 +606,372 @@ function validarEstructuraPreguntas(preguntas_sesion1, preguntas_sesion2) {
 }
 
 
-export default { obtenerUltimoSimulacro,
-     obtenerSimulacrosDisponibles, obtenerResultadosSimulacro ,
-      crearSimulacro, validarEstructuraPreguntas};
+/**
+ * Obtener estructura ICFES oficial
+ */
+function obtenerEstructuraICFES() {
+    return ESTRUCTURA_ICFES;
+}
+
+/**
+ * Obtener todos los simulacros con filtros y paginación
+ */
+async function obtenerTodos(filtros = {}, paginacion = {}) {
+    try {
+        const { page = 1, limit = 10 } = paginacion;
+        const offset = (page - 1) * limit;
+
+        const where = {};
+        if (filtros.estado !== undefined) {
+            where.estado = filtros.estado;
+        }
+
+        const { count, rows } = await Simulacro.findAndCountAll({
+            where,
+            limit: parseInt(limit),
+            offset: parseInt(offset),
+            order: [['fecha_creacion', 'DESC']]
+        });
+
+        return {
+            data: rows,
+            total: count,
+            page: parseInt(page),
+            limit: parseInt(limit),
+            totalPages: Math.ceil(count / limit)
+        };
+    } catch (error) {
+        throw new Error("Error al obtener simulacros: " + error.message);
+    }
+}
+
+/**
+ * Obtener un simulacro por ID con todas sus relaciones
+ */
+async function obtenerPorId(id_simulacro) {
+    try {
+        const simulacro = await Simulacro.findByPk(id_simulacro, {
+            include: [
+                {
+                    model: Sesion,
+                    as: 'sesions',
+                    include: [
+                        {
+                            model: SesionArea,
+                            include: [
+                                {
+                                    model: Area
+                                },
+                                {
+                                    model: SesionPregunta,
+                                    include: [
+                                        {
+                                            model: Pregunta
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        });
+
+        return simulacro;
+    } catch (error) {
+        throw new Error("Error al obtener simulacro: " + error.message);
+    }
+}
+
+/**
+ * Actualizar un simulacro
+ */
+async function actualizarSimulacro(id_simulacro, datos) {
+    try {
+        const simulacro = await Simulacro.findByPk(id_simulacro);
+
+        if (!simulacro) {
+            throw new Error("Simulacro no encontrado");
+        }
+
+        if (datos.nombre !== undefined) simulacro.nombre = datos.nombre;
+        if (datos.descripcion !== undefined) simulacro.descripcion = datos.descripcion;
+        if (datos.estado !== undefined) simulacro.estado = datos.estado;
+
+        await simulacro.save();
+
+        return simulacro;
+    } catch (error) {
+        throw new Error("Error al actualizar simulacro: " + error.message);
+    }
+}
+
+/**
+ * Desactivar un simulacro (soft delete)
+ */
+async function desactivarSimulacro(id_simulacro) {
+    try {
+        const simulacro = await Simulacro.findByPk(id_simulacro);
+
+        if (!simulacro) {
+            throw new Error("Simulacro no encontrado");
+        }
+
+        simulacro.estado = false;
+        await simulacro.save();
+
+        return simulacro;
+    } catch (error) {
+        throw new Error("Error al desactivar simulacro: " + error.message);
+    }
+}
+
+/**
+ * Asignar simulacro a cursos
+ */
+async function asignarSimulacroACursos(id_simulacro, asignaciones) {
+    const t = await db.transaction();
+
+    try {
+        // Validar que el simulacro existe
+        const simulacro = await Simulacro.findByPk(id_simulacro, { transaction: t });
+        if (!simulacro) {
+            throw new Error("Simulacro no encontrado");
+        }
+
+        const resultados = [];
+
+        for (const asignacion of asignaciones) {
+            const { grado, grupo, cohorte, id_institucion, fecha_apertura_s1, fecha_cierre_s1, fecha_apertura_s2, fecha_cierre_s2 } = asignacion;
+
+            // Validar que el curso existe
+            const curso = await Curso.findOne({
+                where: { grado, grupo, cohorte, id_institucion },
+                transaction: t
+            });
+
+            if (!curso) {
+                throw new Error(`Curso ${grado}${grupo} (cohorte ${cohorte}) no encontrado en la institución ${id_institucion}`);
+            }
+
+            // Verificar si ya existe la asignación (usando grado, grupo, cohorte, id_simulacro)
+            const existe = await CursoSimulacro.findOne({
+                where: {
+                    id_simulacro,
+                    grado,
+                    grupo,
+                    cohorte
+                },
+                transaction: t
+            });
+
+            if (existe) {
+                // Actualizar fechas
+                existe.fecha_apertura_s1 = fecha_apertura_s1;
+                existe.fecha_cierre_s1 = fecha_cierre_s1;
+                existe.fecha_apertura_s2 = fecha_apertura_s2;
+                existe.fecha_cierre_s2 = fecha_cierre_s2;
+                await existe.save({ transaction: t });
+                resultados.push({ ...existe.get({ plain: true }), actualizado: true });
+            } else {
+                // Crear nueva asignación
+                // Obtener el siguiente id_curso_simulacro
+                const ultimo = await CursoSimulacro.findOne({
+                    order: [['id_curso_simulacro', 'DESC']],
+                    transaction: t
+                });
+                const nuevoId = ultimo ? ultimo.id_curso_simulacro + 1 : 1;
+
+                const nuevaAsignacion = await CursoSimulacro.create({
+                    id_curso_simulacro: nuevoId,
+                    id_simulacro,
+                    grado,
+                    grupo,
+                    cohorte,
+                    fecha_apertura_s1,
+                    fecha_cierre_s1,
+                    fecha_apertura_s2,
+                    fecha_cierre_s2
+                }, { transaction: t });
+
+                resultados.push({ ...nuevaAsignacion.get({ plain: true }), actualizado: false });
+            }
+        }
+
+        await t.commit();
+        return resultados;
+    } catch (error) {
+        await t.rollback();
+        throw new Error("Error al asignar simulacro: " + error.message);
+    }
+}
+
+/**
+ * Agregar pregunta a una sesión/área
+ */
+async function agregarPreguntaASesion(id_simulacro, numero_sesion, id_area, id_pregunta, puntaje_base = 0.5) {
+    const t = await db.transaction();
+
+    try {
+        // Obtener la sesión
+        const sesion = await Sesion.findOne({
+            where: {
+                id_simulacro,
+                orden: numero_sesion
+            },
+            transaction: t
+        });
+
+        if (!sesion) {
+            throw new Error(`Sesión ${numero_sesion} no encontrada en el simulacro ${id_simulacro}`);
+        }
+
+        // Obtener o crear SesionArea
+        let sesionArea = await SesionArea.findOne({
+            where: {
+                id_sesion: sesion.id_sesion,
+                id_area
+            },
+            transaction: t
+        });
+
+        if (!sesionArea) {
+            // Obtener el orden del área
+            const areasEnSesion = await SesionArea.count({
+                where: { id_sesion: sesion.id_sesion },
+                transaction: t
+            });
+
+            sesionArea = await SesionArea.create({
+                id_sesion: sesion.id_sesion,
+                id_area,
+                orden_area: areasEnSesion + 1,
+                cantidad_preguntas: 0
+            }, { transaction: t });
+        }
+
+        // Verificar que la pregunta existe y pertenece al área
+        const pregunta = await Pregunta.findByPk(id_pregunta, { transaction: t });
+        if (!pregunta) {
+            throw new Error(`Pregunta ${id_pregunta} no encontrada`);
+        }
+        if (pregunta.id_area !== id_area) {
+            throw new Error(`La pregunta ${id_pregunta} no pertenece al área ${id_area}`);
+        }
+
+        // Verificar que no esté ya agregada
+        const existe = await SesionPregunta.findOne({
+            where: {
+                id_sesion_area: sesionArea.id_sesion_area,
+                id_pregunta
+            },
+            transaction: t
+        });
+
+        if (existe) {
+            throw new Error("La pregunta ya está agregada a esta sesión/área");
+        }
+
+        // Obtener el orden en la sesión
+        const preguntasEnSesion = await SesionPregunta.count({
+            include: [{
+                model: SesionArea,
+                where: { id_sesion: sesion.id_sesion },
+                required: true
+            }],
+            transaction: t
+        });
+
+        // Crear SesionPregunta
+        await SesionPregunta.create({
+            id_sesion_area: sesionArea.id_sesion_area,
+            id_pregunta,
+            orden_en_sesion: preguntasEnSesion + 1,
+            puntaje_base
+        }, { transaction: t });
+
+        // Actualizar cantidad de preguntas en SesionArea
+        sesionArea.cantidad_preguntas = (sesionArea.cantidad_preguntas || 0) + 1;
+        await sesionArea.save({ transaction: t });
+
+        await t.commit();
+        return { success: true, mensaje: "Pregunta agregada correctamente" };
+    } catch (error) {
+        await t.rollback();
+        throw error;
+    }
+}
+
+/**
+ * Eliminar pregunta de una sesión/área
+ */
+async function eliminarPreguntaDeSesion(id_simulacro, numero_sesion, id_area, id_pregunta) {
+    const t = await db.transaction();
+
+    try {
+        // Obtener la sesión
+        const sesion = await Sesion.findOne({
+            where: {
+                id_simulacro,
+                orden: numero_sesion
+            },
+            transaction: t
+        });
+
+        if (!sesion) {
+            throw new Error(`Sesión ${numero_sesion} no encontrada`);
+        }
+
+        // Obtener SesionArea
+        const sesionArea = await SesionArea.findOne({
+            where: {
+                id_sesion: sesion.id_sesion,
+                id_area
+            },
+            transaction: t
+        });
+
+        if (!sesionArea) {
+            throw new Error("Área no encontrada en esta sesión");
+        }
+
+        // Eliminar SesionPregunta
+        const eliminado = await SesionPregunta.destroy({
+            where: {
+                id_sesion_area: sesionArea.id_sesion_area,
+                id_pregunta
+            },
+            transaction: t
+        });
+
+        if (eliminado === 0) {
+            throw new Error("Pregunta no encontrada en esta sesión/área");
+        }
+
+        // Actualizar cantidad de preguntas
+        sesionArea.cantidad_preguntas = Math.max(0, (sesionArea.cantidad_preguntas || 0) - 1);
+        await sesionArea.save({ transaction: t });
+
+        await t.commit();
+        return { success: true, mensaje: "Pregunta eliminada correctamente" };
+    } catch (error) {
+        await t.rollback();
+        throw error;
+    }
+}
+
+export default {
+    obtenerUltimoSimulacro,
+    obtenerSimulacrosDisponibles,
+    obtenerResultadosSimulacro,
+    crearSimulacro,
+    validarEstructuraPreguntas,
+    obtenerEstructuraICFES,
+    obtenerTodos,
+    obtenerPorId,
+    actualizarSimulacro,
+    desactivarSimulacro,
+    asignarSimulacroACursos,
+    agregarPreguntaASesion,
+    eliminarPreguntaDeSesion
+};
