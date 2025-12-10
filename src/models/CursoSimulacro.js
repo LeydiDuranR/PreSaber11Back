@@ -36,6 +36,10 @@ const CursoSimulacro = db.define("curso_simulacro", {
         type: DataTypes.INTEGER,
         allowNull: false
     },
+    id_institucion: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+    }
 }, {
     TableName: "curso_simulacro",
     timestamps: false,

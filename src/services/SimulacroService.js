@@ -84,6 +84,9 @@ async function obtenerUltimoSimulacro(id_usuario) {
 async function obtenerSimulacrosDisponibles(id_estudiante) {
     try {
 
+        const estudiante = await Participante.findOne({
+            where: { documento_participante: id_estudiante }
+        });
         // 1. Cursos a los que pertenece el estudiante
         const cursosEst = await Participante.findAll({
             where: { documento_participante: id_estudiante },
@@ -100,6 +103,7 @@ async function obtenerSimulacrosDisponibles(id_estudiante) {
                         grado: c.grado,
                         grupo: c.grupo,
                         cohorte: c.cohorte,
+                        id_institucion: estudiante.id_institucion,
                         habilitado: true
                     }
                 });
@@ -115,7 +119,8 @@ async function obtenerSimulacrosDisponibles(id_estudiante) {
         const condicionesCurso = cursosValidos.map(c => ({
             grado: c.grado,
             grupo: c.grupo,
-            cohorte: c.cohorte
+            cohorte: c.cohorte,
+            id_institucion: c.id_institucion
         }));
 
         // function ahoraColombia() {
