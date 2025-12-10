@@ -1,4 +1,3 @@
-// controllers/SesionController.js
 import SesionService from "../services/SesionService.js";
 
 async function obtenerPreguntasSesion(req, res) {
