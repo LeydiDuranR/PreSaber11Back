@@ -7,7 +7,7 @@ import Usuario from "../models/Usuario.js";
 import Rol from "../models/Rol.js";
 import db from "../db/db.js";
 import { Op } from "sequelize";
-import {admin} from "../config/firebase.js";
+import { admin } from "../config/firebase.js";
 
 export const verificarCurso = async (grado, grupo, cohorte, id_institucion, clave_acceso) => {
   const curso = await Curso.findOne({
@@ -242,10 +242,17 @@ export const obtenerParticipantesCurso = async (grado, grupo, cohorte, idInstitu
 
     // Ordenar: primero docentes, luego estudiantes por nombre
     participantesConFirebase.sort((a, b) => {
-      if (a.rol.id !== b.rol.id) {
-        return a.rol.id - b.rol.id; // Docentes primero (id_rol menor)
-      }
-      return a.nombre_completo.localeCompare(b.nombre_completo);
+      const prioridad = (rolId) => {
+        if (rolId === 2 || rolId === 4) return 1; // Docente o Director
+        if (rolId === 3) return 2;               // Estudiante
+        return 99;                               // Otros al final
+      };
+
+      const pa = prioridad(a.rol.id);
+      const pb = prioridad(b.rol.id);
+
+      if (pa !== pb) return pa - pb; // Orden por prioridad
+      return a.nombre_completo.localeCompare(b.nombre_completo); // Orden alfabético
     });
 
     return participantesConFirebase;
