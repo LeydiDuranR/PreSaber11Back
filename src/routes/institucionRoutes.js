@@ -1,10 +1,18 @@
-import { Router } from "express";
-import { listarInstituciones, crearInstitucion } from "../controllers/institucionController.js";
+import express from "express";
+import {
+  listarInstituciones,
+  listarInstitucionesCompletasController,
+  crearInstitucionController,
+  listarDepartamentos,
+  listarMunicipios
+} from "../controllers/institucionController.js";
 
-const router = Router();
+const router = express.Router();
 
 router.get("/", listarInstituciones);
-router.post("/", crearInstitucion);
-
+router.get("/completas", listarInstitucionesCompletasController);
+router.post("/", crearInstitucionController);
+router.get("/departamentos", listarDepartamentos);
+router.get("/departamentos/:id/municipios", listarMunicipios);
 
 export default router;

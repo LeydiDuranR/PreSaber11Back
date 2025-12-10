@@ -10,7 +10,10 @@ import {
   verificarUsuarioExistenteService,
   obtenerUsuarioPorUidFirebase,
   crearDocenteService,
-  obtenerCursosDeDocenteService
+  obtenerCursosDeDocenteService,
+  crearAdministradorService,
+  listarAdministradoresService,
+  obtenerAdministradorService
 } from "../services/usuarioService.js";
 
 export const crearUsuario = async (req, res) => {
@@ -205,5 +208,58 @@ export const obtenerDocentesPorNombreYApellido = async (req, res) => {
 
   } catch (error) {
     res.status(404).json({ error: error.message });
+  }
+};
+
+// POST /api/usuarios/administrador
+export const crearAdministrador = async (req, res) => {
+  try {
+    const resultado = await crearAdministradorService(req.body);
+    res.status(201).json({
+      success: true,
+      data: resultado.administrador,
+      mensaje: resultado.mensaje
+    });
+  } catch (error) {
+    console.error("Error en crearAdministrador:", error);
+    res.status(400).json({
+      success: false,
+      mensaje: error.message || "Error al crear administrador"
+    });
+  }
+};
+
+// GET /api/usuarios/administradores
+export const listarAdministradores = async (req, res) => {
+  try {
+    const administradores = await listarAdministradoresService();
+    res.status(200).json({
+      success: true,
+      data: administradores
+    });
+  } catch (error) {
+    console.error("Error en listarAdministradores:", error);
+    res.status(500).json({
+      success: false,
+      mensaje: error.message || "Error al listar administradores"
+    });
+  }
+};
+
+// GET /api/usuarios/administrador/:documento
+export const obtenerAdministrador = async (req, res) => {
+  try {
+    const { documento } = req.params;
+    const administrador = await obtenerAdministradorService(documento);
+    res.status(200).json({
+      success: true,
+      data: administrador
+    });
+  } catch (error) {
+    console.error("Error en obtenerAdministrador:", error);
+    res.status(404).json({
+      success: false,
+      mensaje: error.message || "Error al obtener administrador"
+    });
   }
 };
