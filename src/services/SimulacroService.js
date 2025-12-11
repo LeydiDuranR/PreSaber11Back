@@ -13,6 +13,7 @@ import Area from "../models/Area.js";
 import Pregunta from "../models/Pregunta.js";
 import db from "../db/db.js";
 import ProgresoSesion from "../models/ProgresoSesion.js";
+import RespuestaEstudiante from "../models/RespuestaEstudiante.js";
 
 
 async function obtenerUltimoSimulacro(id_usuario) {
@@ -225,7 +226,8 @@ async function obtenerResultadosSimulacro(id_simulacro, id_estudiante) {
                 include: [{
                     model: ResultadoArea,
                     as: "areas",
-                    include: [{ model: SesionArea, as: "sesion_area", include: [{ model: Area }] }]
+                    include: [{ model: SesionArea, as: "sesion_area", include: [{ model: Area }] },
+                    { model: RespuestaEstudiante, as: "respuestas" }]
                 }]
             }]
         });
@@ -266,9 +268,8 @@ async function obtenerResultadosSimulacro(id_simulacro, id_estudiante) {
 
         // 3. Agrupar resultados por área
         const resultadosPorArea = {};
-
-        resSim.resultado_sesions.forEach(rs => {
-            rs.resultado_areas.forEach(ra => {
+        resSim.sesiones.forEach(rs => { // <--- CORRECCIÓN (sesiones)
+            rs.areas.forEach(ra => { // <--- CORRECCIÓN (areas)
                 const area = ra.sesion_area?.area;
                 if (area) {
                     if (!resultadosPorArea[area.id_area]) {
@@ -282,6 +283,7 @@ async function obtenerResultadosSimulacro(id_simulacro, id_estudiante) {
                 }
             });
         });
+
 
         // 4. Calcular puntaje máximo por área
         for (const sesion of sesiones) {
@@ -309,11 +311,24 @@ async function obtenerResultadosSimulacro(id_simulacro, id_estudiante) {
         }
 
         // 5. Sumar puntajes obtenidos por área desde ResultadoArea
-        resSim.resultado_sesions.forEach(rs => {
-            rs.resultado_areas.forEach(ra => {
+        // 5. Sumar puntajes obtenidos por área desde RespuestaEstudiante (calculado)
+        resSim.sesiones.forEach(rs => {
+            rs.areas.forEach(ra => {
                 const area = ra.sesion_area?.area;
+
                 if (area && resultadosPorArea[area.id_area]) {
-                    resultadosPorArea[area.id_area].puntaje_obtenido += Number(ra.puntaje_area || 0);
+                    let puntajeObtenidoArea = 0;
+
+                    // Iterar sobre las respuestas incluidas en ResultadoArea
+                    if (ra.respuestas && ra.respuestas.length > 0) { // <--- Usar el nuevo alias 'respuestas'
+                        puntajeObtenidoArea = ra.respuestas.reduce((sum, respuesta) => {
+                            // Sumar el puntaje de la respuesta individual
+                            return sum + Number(respuesta.puntaje_respuesta || 0);
+                        }, 0);
+                    }
+
+                    // Agregar al acumulador general del área
+                    resultadosPorArea[area.id_area].puntaje_obtenido += puntajeObtenidoArea;
                 }
             });
         });
