@@ -19,13 +19,12 @@ const ResultadoArea = db.define("resultado_area", {
 
 //relaciones
 
-SesionArea.hasMany(ResultadoArea, { foreignKey: "id_sesion_area" });
-ResultadoArea.belongsTo(SesionArea, { foreignKey: "id_sesion_area" });
+SesionArea.hasMany(ResultadoArea, { foreignKey: "id_sesion_area", as: "resultado" });
+ResultadoArea.belongsTo(SesionArea, { foreignKey: "id_sesion_area", as: "sesion_area" });
 
 
-ResultadoSesion.hasMany(ResultadoArea, { foreignKey: "id_resultado_sesion" });
-ResultadoArea.belongsTo(ResultadoSesion, { foreignKey: "id_resultado_sesion" });
-
+ResultadoSesion.hasMany(ResultadoArea, { foreignKey: "id_resultado_sesion", as: "areas" });
+ResultadoArea.belongsTo(ResultadoSesion, { foreignKey: "id_resultado_sesion", as: "resultado_sesion" });
 
 
 export default ResultadoArea;

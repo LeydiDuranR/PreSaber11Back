@@ -17,6 +17,7 @@ import salaPrivadaRoutes from './routes/salaPrivadaRoutes.js';
 import simulacroGrupalRoutes from './routes/simulacroGrupalRoutes.js';
 import simulacroRoutes from './routes/SimulacroRoutes.js';
 import sesionRoutes from "./routes/SesionRoutes.js";
+import perfilEstudianteRoutes from "./routes/perfilEstudianteRoutes.js";
 dotenv.config();
 
 
@@ -50,6 +51,7 @@ app.use('/api/salas', salaPrivadaRoutes);
 app.use('/api/simulacro-grupal', simulacroGrupalRoutes);
 app.use("/api/simulacros", simulacroRoutes);
 app.use("/api/sesiones", sesionRoutes);
+app.use("/api/estudiantes", perfilEstudianteRoutes);
 
 // Ruta base
 app.get("/", (req, res) => {
