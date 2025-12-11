@@ -187,7 +187,7 @@ class RetoController {
                 });
             }
 
-            const resultado = await RetoService.crearReto(req.body);
+            const resultado = await retoService.crearReto(req.body);
 
             return res.status(201).json(resultado);
 
