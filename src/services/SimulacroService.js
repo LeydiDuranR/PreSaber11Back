@@ -32,14 +32,14 @@ async function obtenerUltimoSimulacro(id_usuario) {
                             include: [
                                 {
                                     model: ResultadoSesion,
-                                    as: "sesiones",
+                                    as: "resultados", // <-- Alias usado
                                     attributes: [
                                         "tiempo_usado_segundos"
                                     ],
                                     include: [
                                         {
                                             model: ResultadoArea,
-                                            as: "areas",
+                                            as: "areas", // <-- Alias usado
                                             attributes: ["correctas", "incorrectas"]
                                         }
                                     ]
@@ -60,8 +60,10 @@ async function obtenerUltimoSimulacro(id_usuario) {
 
 
         ultimo.simulacro.sesions.forEach((sesion) => {
-            sesion.resultado_sesions.forEach((rs) => {
-                rs.resultado_areas.forEach((area) => {
+            // CORRECCIÓN 1: Usar 'resultados' en lugar de 'resultado_sesions'
+            sesion.resultados.forEach((rs) => {
+                // CORRECCIÓN 2: Usar 'areas' en lugar de 'resultado_areas'
+                rs.areas.forEach((area) => {
                     preguntas_total += area.correctas + area.incorrectas;
                 });
                 tiempo_total += Number(rs.tiempo_usado_segundos);
