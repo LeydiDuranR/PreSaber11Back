@@ -58,7 +58,7 @@ class RetoService {
         } catch (error) {
             throw new Error(`Error al listar retos por área: ${error.message}`);
         }
-    }
+  }
 
   // Obtener preguntas de un reto con sus opciones
   async obtenerPreguntasReto(idReto) {

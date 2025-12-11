@@ -1,5 +1,6 @@
 import Tema from "../models/Tema.js";
 import Area from "../models/Area.js";
+import db from "../db/db.js";
 
 async function obtenerTemasPorArea(id_area) {
   try {
