@@ -3,7 +3,7 @@ import retoController from '../controllers/RetoController.js';
 
 const router = express.Router();
 
-router.post('/crear', retoController.crearReto);
+router.post('/crear', retoController.crear);
 router.get('/area/:idArea', retoController.listarRetosPorArea);
 router.get('/:idReto/preguntas', retoController.obtenerPreguntasReto);
 
