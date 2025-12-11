@@ -251,9 +251,13 @@ async function guardarRespuesta({
     // 2. Obtener SesionPregunta con su área y pregunta
     const sp = await SesionPregunta.findByPk(id_sesion_pregunta, {
       include: [
-        { model: SesionArea },
+        {
+          model: SesionArea,
+          as: "sesion_area"
+        },
         {
           model: Pregunta,
+          as: "preguntum",
           include: [{
             model: Opcion,
             as: "opciones"
@@ -427,6 +431,7 @@ async function guardarRespuesta({
     const totalRespuestas = await RespuestaEstudiante.count({
       include: [{
         model: ResultadoArea,
+        as: "resultado_area",
         where: { id_resultado_sesion: resultadoSesion.id_resultado_sesion }
       }],
       transaction: t
