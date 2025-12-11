@@ -31,14 +31,14 @@ async function obtenerUltimoSimulacro(id_usuario) {
                             include: [
                                 {
                                     model: ResultadoSesion,
-                                    as: "resultado_sesions",
+                                    as: "sesiones",
                                     attributes: [
                                         "tiempo_usado_segundos"
                                     ],
                                     include: [
                                         {
                                             model: ResultadoArea,
-                                            as: "resultado_areas",
+                                            as: "areas",
                                             attributes: ["correctas", "incorrectas"]
                                         }
                                     ]
@@ -221,9 +221,11 @@ async function obtenerResultadosSimulacro(id_simulacro, id_estudiante) {
             },
             include: [{
                 model: ResultadoSesion,
+                as: "sesiones",
                 include: [{
                     model: ResultadoArea,
-                    include: [{ model: SesionArea, include: [{ model: Area }] }]
+                    as: "areas",
+                    include: [{ model: SesionArea, as: "sesion_area", include: [{ model: Area }] }]
                 }]
             }]
         });
@@ -237,7 +239,9 @@ async function obtenerResultadosSimulacro(id_simulacro, id_estudiante) {
 
         // 2. Calcular puntaje máximo total del simulacro (todas las sesiones)
         const simulacro = await Simulacro.findByPk(id_simulacro, {
-            include: [{ model: Sesion }]
+            include: [{
+                model: Sesion
+            }]
         });
 
         const sesiones = simulacro.sesions || [];
@@ -248,6 +252,7 @@ async function obtenerResultadosSimulacro(id_simulacro, id_estudiante) {
                 attributes: ['puntaje_base'],
                 include: [{
                     model: SesionArea,
+                    as: 'sesion_area',
                     where: { id_sesion: sesion.id_sesion },
                     attributes: [],
                     required: true
@@ -282,7 +287,9 @@ async function obtenerResultadosSimulacro(id_simulacro, id_estudiante) {
         for (const sesion of sesiones) {
             const sesionAreas = await SesionArea.findAll({
                 where: { id_sesion: sesion.id_sesion },
-                include: [{ model: Area }]
+                include: [{
+                    model: Area
+                }]
             });
 
             for (const sa of sesionAreas) {
