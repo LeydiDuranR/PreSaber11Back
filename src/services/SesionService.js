@@ -332,7 +332,7 @@ async function guardarRespuesta({
         puntaje_sesion: 0,
         tiempo_usado_segundos: 0,
         fecha_inicio: new Date(),
-        fecha_fin: null, // ⭐ Cambiar a null hasta finalizar
+        fecha_fin: new Date(), // ⭐ Temporal - se actualizará al finalizar
         id_sesion: id_sesion,
         id_resultado_simulacro: resSim.id_resultado_simulacro,
       }, { transaction: t });
@@ -438,10 +438,10 @@ async function guardarRespuesta({
         ultima_actualizacion: new Date(),
         id_usuario: id_estudiante,
         id_sesion: id_sesion,
-        ultima_pregunta: id_sesion_pregunta
+        ultima_pregunta: sp.id_pregunta // Usar id_pregunta, no id_sesion_pregunta
       }, { transaction: t });
     } else {
-      progreso.ultima_pregunta = id_sesion_pregunta;
+      progreso.ultima_pregunta = sp.id_pregunta; // Usar id_pregunta, no id_sesion_pregunta
       progreso.ultima_actualizacion = new Date();
       await progreso.save({ transaction: t });
     }
@@ -581,6 +581,7 @@ async function finalizarSesion({ id_estudiante, id_sesion, tiempo_usado_final })
     throw error;
   }
 }
+
 
 
 async function obtenerResultadosSesion(id_sesion, id_estudiante) {
