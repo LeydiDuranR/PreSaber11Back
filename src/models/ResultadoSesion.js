@@ -12,7 +12,7 @@ const ResultadoSesion = db.define("resultado_sesion", {
     puntaje_sesion: { type: DataTypes.INTEGER, allowNull: false },
     tiempo_usado_segundos: { type: DataTypes.INTEGER, allowNull: false },
     fecha_inicio: { type: DataTypes.DATE, allowNull: false },
-    fecha_fin: { type: DataTypes.DATE, allowNull: false },
+    fecha_fin: { type: DataTypes.DATE, allowNull: true },
 }, {
     tableName: "resultado_sesion",
     timestamps: false,
