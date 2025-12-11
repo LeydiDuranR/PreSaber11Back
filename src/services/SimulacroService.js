@@ -12,6 +12,7 @@ import SesionArea from "../models/SesionArea.js";
 import Area from "../models/Area.js";
 import Pregunta from "../models/Pregunta.js";
 import db from "../db/db.js";
+import ProgresoSesion from "../models/ProgresoSesion.js";
 
 
 async function obtenerUltimoSimulacro(id_usuario) {
@@ -137,12 +138,11 @@ async function obtenerSimulacrosDisponibles(id_estudiante) {
         let ahora = ahoraColombia();
 
         // 3. Buscar los curso_simulacro activos
-
         // let ahora = new Date();
         const cursoSim = await CursoSimulacro.findAll({
             where: {
                 [Op.or]: condicionesCurso,
-                fecha_cierre_s2: { [Op.gt]: ahora }  //ARREGLAR LO DE UTC
+                fecha_cierre_s2: { [Op.gt]: ahora }
             },
             include: [
                 {
@@ -157,10 +157,12 @@ async function obtenerSimulacrosDisponibles(id_estudiante) {
             ]
         });
 
-        const resultado = cursoSim.map(cs => {
+        // Importar ProgresoSesion si no está disponible en el scope (ya lo está arriba)
+
+        const resultado = await Promise.all(cursoSim.map(async cs => {
             const sim = cs.simulacro;
 
-            const sesionesConEstado = sim.sesions.map(sesion => {
+            const sesionesConEstado = await Promise.all(sim.sesions.map(async sesion => {
                 const orden = sesion.orden;
 
                 // nombre dinámico: fecha_apertura_s1, fecha_cierre_s1, etc.
@@ -173,13 +175,23 @@ async function obtenerSimulacrosDisponibles(id_estudiante) {
                     habilitada = (apertura <= ahora && cierre > ahora);
                 }
 
+                // Verificar si ya está completada por el estudiante
+                const progreso = await ProgresoSesion.findOne({
+                    where: {
+                        id_usuario: id_estudiante,
+                        id_sesion: sesion.id_sesion,
+                        completada: true
+                    }
+                });
+
                 return {
                     ...sesion.get({ plain: true }),
                     habilitada,
+                    completada: !!progreso,
                     fecha_apertura: apertura,
                     fecha_cierre: cierre
                 };
-            });
+            }));
 
             return {
                 ...cs.get({ plain: true }),
@@ -188,7 +200,7 @@ async function obtenerSimulacrosDisponibles(id_estudiante) {
                     sesions: sesionesConEstado
                 }
             };
-        });
+        }));
 
         return resultado;
 
