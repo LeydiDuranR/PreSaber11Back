@@ -234,6 +234,8 @@ async function guardarRespuesta({
   const t = await db.transaction();
 
   try {
+    console.log("📝 Guardando respuesta:", { id_estudiante, id_sesion, id_sesion_pregunta, id_opcion });
+
     // 1. Validar que la sesión no esté completada
     const progresoExistente = await ProgresoSesion.findOne({
       where: { id_usuario: id_estudiante, id_sesion },
@@ -267,7 +269,10 @@ async function guardarRespuesta({
       transaction: t
     });
 
-    if (!sp) throw new Error("Pregunta no encontrada en esta sesión");
+    if (!sp) {
+      await t.rollback();
+      throw new Error("Pregunta no encontrada en esta sesión");
+    }
 
     // 3. Validar que la opción pertenezca a esta pregunta
     const pregunta = sp.preguntum;
@@ -275,15 +280,21 @@ async function guardarRespuesta({
     const opcionValida = opciones.find(o => o.id_opcion === id_opcion);
 
     if (!opcionValida) {
+      await t.rollback();
       throw new Error("La opción seleccionada no pertenece a esta pregunta");
     }
 
     const esCorrecta = !!opcionValida.es_correcta;
     const puntajeRespuesta = esCorrecta ? Number(sp.puntaje_base || 1) : 0;
 
+    console.log("✅ Validación OK - Es correcta:", esCorrecta, "Puntaje:", puntajeRespuesta);
+
     // 4. Obtener la sesión
     const sesion = await Sesion.findByPk(id_sesion, { transaction: t });
-    if (!sesion) throw new Error("Sesión no encontrada");
+    if (!sesion) {
+      await t.rollback();
+      throw new Error("Sesión no encontrada");
+    }
 
     // 5. Obtener o crear ResultadoSimulacro
     let resSim = await ResultadoSimulacro.findOne({
@@ -296,6 +307,7 @@ async function guardarRespuesta({
     });
 
     if (!resSim) {
+      console.log("📊 Creando ResultadoSimulacro...");
       resSim = await ResultadoSimulacro.create({
         fecha_fin: null,
         puntaje_total: 0,
@@ -315,16 +327,16 @@ async function guardarRespuesta({
     });
 
     if (!resultadoSesion) {
+      console.log("📊 Creando ResultadoSesion...");
       resultadoSesion = await ResultadoSesion.create({
         puntaje_sesion: 0,
         tiempo_usado_segundos: 0,
         fecha_inicio: new Date(),
-        fecha_fin: new Date(),
+        fecha_fin: null, // ⭐ Cambiar a null hasta finalizar
         id_sesion: id_sesion,
         id_resultado_simulacro: resSim.id_resultado_simulacro,
       }, { transaction: t });
     }
-
 
     // 7. Obtener o crear ResultadoArea
     let resArea = await ResultadoArea.findOne({
@@ -336,6 +348,7 @@ async function guardarRespuesta({
     });
 
     if (!resArea) {
+      console.log("📊 Creando ResultadoArea...");
       resArea = await ResultadoArea.create({
         correctas: 0,
         incorrectas: 0,
@@ -360,6 +373,7 @@ async function guardarRespuesta({
     if (respuestaExistente) {
       // Ya existe - verificar si cambió
       if (respuestaExistente.id_opcion_seleccionada !== id_opcion) {
+        console.log("🔄 Actualizando respuesta existente...");
         cambioRespuesta = true;
         puntajeAnterior = Number(respuestaExistente.puntaje_respuesta || 0);
         esCorrectaAnterior = respuestaExistente.es_correcta;
@@ -385,9 +399,12 @@ async function guardarRespuesta({
 
         resSim.puntaje_total = Number(resSim.puntaje_total || 0) - puntajeAnterior + puntajeRespuesta;
         await resSim.save({ transaction: t });
+      } else {
+        console.log("ℹ️ Respuesta sin cambios");
       }
     } else {
       // Nueva respuesta
+      console.log("✨ Creando nueva respuesta...");
       await RespuestaEstudiante.create({
         puntaje_respuesta: puntajeRespuesta,
         es_correcta: esCorrecta,
@@ -398,6 +415,7 @@ async function guardarRespuesta({
 
       if (esCorrecta) resArea.correctas += 1;
       else resArea.incorrectas += 1;
+      await resArea.save({ transaction: t });
 
       resultadoSesion.puntaje_sesion = Number(resultadoSesion.puntaje_sesion || 0) + puntajeRespuesta;
       await resultadoSesion.save({ transaction: t });
@@ -413,6 +431,7 @@ async function guardarRespuesta({
     });
 
     if (!progreso) {
+      console.log("📊 Creando ProgresoSesion...");
       progreso = await ProgresoSesion.create({
         completada: false,
         fecha_inicio: new Date(),
@@ -420,7 +439,6 @@ async function guardarRespuesta({
         id_usuario: id_estudiante,
         id_sesion: id_sesion,
         ultima_pregunta: id_sesion_pregunta
-
       }, { transaction: t });
     } else {
       progreso.ultima_pregunta = id_sesion_pregunta;
@@ -428,6 +446,7 @@ async function guardarRespuesta({
       await progreso.save({ transaction: t });
     }
 
+    // 10. Contar total de respuestas
     const totalRespuestas = await RespuestaEstudiante.count({
       include: [{
         model: ResultadoArea,
@@ -438,6 +457,8 @@ async function guardarRespuesta({
     });
 
     await t.commit();
+
+    console.log("✅ Respuesta guardada exitosamente");
 
     return {
       status: "ok",
@@ -451,12 +472,12 @@ async function guardarRespuesta({
 
   } catch (error) {
     await t.rollback();
+    console.error("❌ Error en guardarRespuesta:", error);
     throw error;
   }
 }
 
-
-// Resto de funciones...
+// Finalizar sesión
 async function finalizarSesion({ id_estudiante, id_sesion, tiempo_usado_final }) {
   const t = await db.transaction();
 
@@ -468,6 +489,7 @@ async function finalizarSesion({ id_estudiante, id_sesion, tiempo_usado_final })
     });
 
     if (!progreso) {
+      await t.rollback();
       throw new Error("No existe progreso para esta sesión");
     }
 
@@ -485,7 +507,7 @@ async function finalizarSesion({ id_estudiante, id_sesion, tiempo_usado_final })
     progreso.ultima_actualizacion = new Date();
     await progreso.save({ transaction: t });
 
-    // 3. Actualizar ResultadoSesion - fecha_fin y tiempo
+    // 3. Actualizar ResultadoSesion
     const sesion = await Sesion.findByPk(id_sesion, { transaction: t });
     const resSim = await ResultadoSimulacro.findOne({
       where: {
@@ -509,11 +531,9 @@ async function finalizarSesion({ id_estudiante, id_sesion, tiempo_usado_final })
       });
 
       if (resultadoSesion) {
-        // Calcular tiempo desde ResultadoSesion.fecha_inicio
         const inicio = new Date(resultadoSesion.fecha_inicio);
         tiempo_total = tiempo_usado_final || Math.floor((new Date() - inicio) / 1000);
 
-        // ⭐ Actualizar fecha_fin y tiempo solo al finalizar
         resultadoSesion.fecha_fin = new Date();
         resultadoSesion.tiempo_usado_segundos = tiempo_total;
         await resultadoSesion.save({ transaction: t });
@@ -521,7 +541,7 @@ async function finalizarSesion({ id_estudiante, id_sesion, tiempo_usado_final })
         puntaje_final = resultadoSesion.puntaje_sesion;
       }
 
-      // 4. Verificar si todas las sesiones del simulacro están completas
+      // 4. Verificar si todas las sesiones están completas
       const todasSesiones = await Sesion.findAll({
         where: { id_simulacro: sesion.id_simulacro },
         transaction: t
@@ -539,7 +559,6 @@ async function finalizarSesion({ id_estudiante, id_sesion, tiempo_usado_final })
         }
       }
 
-      // Si todas están completas, marcar simulacro como completado
       if (todasCompletas) {
         resSim.completado = true;
         resSim.fecha_fin = new Date();
