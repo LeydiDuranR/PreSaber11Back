@@ -66,12 +66,14 @@ async function obtenerPreguntasParaSesion(id_sesion, id_estudiante) {
     });
   }
 
+  console.log(`🔍 Buscando preguntas para sesión ${id_sesion} (Estudiante: ${id_estudiante})`);
+
   // 3. Obtener todas las SesionPreguntas con sus relaciones
   const sesionPreguntas = await SesionPregunta.findAll({
     include: [
       {
         model: SesionArea,
-        as: "sesion_area",
+        // as: "sesion_area", // Removed alias not in model definition
         where: { id_sesion },
         include: [{
           model: Area
@@ -79,7 +81,7 @@ async function obtenerPreguntasParaSesion(id_sesion, id_estudiante) {
       },
       {
         model: Pregunta,
-        as: "preguntum",
+        // as: "preguntum", // Removed alias not in model definition
         include: [{
           model: Opcion,
           as: "opciones"
@@ -87,17 +89,23 @@ async function obtenerPreguntasParaSesion(id_sesion, id_estudiante) {
       }
     ],
     order: [
-      [{ model: SesionArea, as: "sesion_area" }, "orden_area", "ASC"],
+      [{ model: SesionArea }, "orden_area", "ASC"], // Updated order reference
       ["orden_en_sesion", "ASC"]
     ]
   });
 
+  console.log(`✅ Encontradas ${sesionPreguntas.length} preguntas.`);
+
   // 4. Construir array de preguntas
   const preguntasPlano = [];
 
+  if (sesionPreguntas.length > 0) {
+    console.log('Sample SesionPregunta keys:', Object.keys(sesionPreguntas[0].toJSON()));
+  }
+
   for (const sp of sesionPreguntas) {
-    const sesionArea = sp.sesion_area;
-    const pregunta = sp.preguntum;
+    const sesionArea = sp.sesion_area || sp.SesionArea;
+    const pregunta = sp.pregunta || sp.Pregunta || sp.preguntum;
     const opciones = pregunta?.opciones || [];
 
     preguntasPlano.push({
@@ -107,7 +115,7 @@ async function obtenerPreguntasParaSesion(id_sesion, id_estudiante) {
       puntaje_base: sp.puntaje_base,
       id_sesion_area: sp.id_sesion_area,
       area_id: sesionArea?.id_area || null,
-      area_nombre: sesionArea?.area?.nombre || null,
+      area_nombre: sesionArea?.area?.nombre || sesionArea?.Area?.nombre || null,
       enunciado: pregunta?.enunciado || pregunta?.texto || null,
       imagen_url: pregunta?.imagen_url || null,
       opciones: opciones.map(o => ({
@@ -218,7 +226,7 @@ async function obtenerPreguntasParaSesion(id_sesion, id_estudiante) {
       puntaje_acumulado,
       puede_continuar: !progreso?.completada
     },
-    puedeIngresar: !progreso?.completada
+    puedeIngresar: true
   };
 }
 

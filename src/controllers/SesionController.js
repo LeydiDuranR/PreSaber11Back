@@ -11,7 +11,8 @@ async function obtenerPreguntasSesion(req, res) {
 
     if (!resultado.puedeIngresar) {
       return res.status(403).json({
-        message: resultado.mensaje || "No puede ingresar a esta sesión porque hay sesiones previas incompletas."
+        message: resultado.mensaje || "No puede ingresar a esta sesión porque hay sesiones previas incompletas.",
+        sesionBloqueada: resultado.sesionBloqueada
       });
     }
 
