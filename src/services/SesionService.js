@@ -21,7 +21,7 @@ async function obtenerPreguntasParaSesion(id_sesion, id_estudiante) {
 
   // 2. Verificar restricción de sesiones previas
   const simulacro = await Simulacro.findByPk(sesion.id_simulacro, {
-    include: [{ model: Sesion }]
+    include: [{ model: Sesion, as: "sesions" }]
   });
 
   let puedeIngresar = true;
@@ -59,6 +59,7 @@ async function obtenerPreguntasParaSesion(id_sesion, id_estudiante) {
     include: [
       {
         model: SesionArea,
+        as: "sesion_area",
         where: { id_sesion },
         include: [{
           model: Area
@@ -66,6 +67,7 @@ async function obtenerPreguntasParaSesion(id_sesion, id_estudiante) {
       },
       {
         model: Pregunta,
+        as: "preguntum",
         include: [{
           model: Opcion,
           as: "opciones"
@@ -112,15 +114,18 @@ async function obtenerPreguntasParaSesion(id_sesion, id_estudiante) {
     attributes: ['id_sesion_pregunta', 'id_opcion_seleccionada', 'es_correcta'],
     include: [{
       model: ResultadoArea,
+      as: 'resultado_area',
       attributes: ['id_sesion_area', 'id_resultado_sesion'],
       required: true,
       include: [{
         model: ResultadoSesion,
+        as: 'resultado_sesion',
         attributes: ['id_sesion', 'id_resultado_sesion'],
         where: { id_sesion },
         required: true,
         include: [{
           model: ResultadoSimulacro,
+          as: 'resultado_simulacro',
           attributes: ['id_estudiante'],
           where: { id_estudiante },
           required: true
@@ -173,6 +178,7 @@ async function obtenerPreguntasParaSesion(id_sesion, id_estudiante) {
     },
     include: [{
       model: ResultadoSesion,
+      as: "sesiones",
       where: { id_sesion },
       required: false
     }]
@@ -574,6 +580,7 @@ async function obtenerResultadosSesion(id_sesion, id_estudiante) {
     where: { id_estudiante },
     include: [{
       model: ResultadoSesion,
+      as: "sesiones",
       where: { id_sesion },
       required: true
     }]
@@ -593,6 +600,7 @@ async function obtenerResultadosSesion(id_sesion, id_estudiante) {
     attributes: ['puntaje_base'],
     include: [{
       model: SesionArea,
+      as: "sesion_area",
       where: { id_sesion },
       attributes: [],
       required: true
@@ -607,21 +615,27 @@ async function obtenerResultadosSesion(id_sesion, id_estudiante) {
   const respuestas = await RespuestaEstudiante.findAll({
     include: [{
       model: ResultadoArea,
+      as: "resultado_area",
       include: [{
         model: ResultadoSesion,
+        as: "resultado_sesion",
         where: { id_sesion },
         include: [{
           model: ResultadoSimulacro,
+          as: "resultado_simulacro",
           where: { id_estudiante }
         }]
       }, {
         model: SesionArea,
+        as: "sesion_area",
         include: [{ model: Area }]
       }]
     }, {
       model: SesionPregunta,
+      as: "sesion_pregunta",
       include: [{
         model: Pregunta,
+        as: "preguntum",
         include: [{ model: Opcion, as: "opciones" }]
       }]
     }],
