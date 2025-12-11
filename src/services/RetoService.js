@@ -398,6 +398,64 @@ class RetoService {
       throw new Error(`Error al obtener historial: ${error.message}`);
     }
   }
+
+  async crearReto(datosReto) {
+    const transaction = await db.transaction();
+    
+    try {
+      const { nombre, descripcion, nivel_dificultad, duracion, cantidad_preguntas, id_tema } = datosReto;
+
+      // 1. Verificar si hay suficientes preguntas disponibles para el tema
+      const preguntasDisponibles = await Pregunta.count({
+        where: { id_tema: id_tema }
+      });
+
+      if (preguntasDisponibles < cantidad_preguntas) {
+        throw new Error(`No hay suficientes preguntas en este tema. Disponibles: ${preguntasDisponibles}, Solicitadas: ${cantidad_preguntas}`);
+      }
+
+      // 2. Crear el Reto
+      const nuevoReto = await Reto.create({
+        nombre,
+        descripcion,
+        nivel_dificultad,
+        duracion,
+        cantidad_preguntas,
+        id_tema,
+        fecha_creacion: new Date()
+      }, { transaction });
+
+      // 3. Seleccionar preguntas aleatorias del tema
+      // Usamos db.fn('RAND') o 'RANDOM' dependiendo del motor de DB (MySQL usa RAND())
+      const preguntasSeleccionadas = await Pregunta.findAll({
+        where: { id_tema: id_tema },
+        order: [db.fn('RAND')], // Orden aleatorio
+        limit: cantidad_preguntas,
+        attributes: ['id_pregunta'],
+        transaction
+      });
+
+      // 4. Asociar preguntas al reto (Tabla intermedia RetoPregunta)
+      const retoPreguntasData = preguntasSeleccionadas.map(p => ({
+        id_reto: nuevoReto.id_reto,
+        id_pregunta: p.id_pregunta
+      }));
+
+      await RetoPregunta.bulkCreate(retoPreguntasData, { transaction });
+
+      await transaction.commit();
+
+      return {
+        success: true,
+        message: 'Reto creado exitosamente',
+        reto: nuevoReto
+      };
+
+    } catch (error) {
+      await transaction.rollback();
+      throw new Error(`Error al crear el reto: ${error.message}`);
+    }
+  }
 }
 
 export default new RetoService();
