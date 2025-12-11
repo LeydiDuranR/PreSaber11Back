@@ -218,7 +218,7 @@ async function obtenerPreguntasParaSesion(id_sesion, id_estudiante) {
       puntaje_acumulado,
       puede_continuar: !progreso?.completada
     },
-    puedeIngresar: true
+    puedeIngresar: !progreso?.completada
   };
 }
 
