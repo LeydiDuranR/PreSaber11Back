@@ -36,7 +36,7 @@ async crearSimulacro(idDocente, grado, grupo, cohorte, idInstitucion, cantidadPr
     const docente = await Usuario.findOne({
       where: {
         documento: idDocente,
-        id_rol: 2 || 4
+        id_rol: { [Op.in]: [2, 4] }
       },
       transaction
     });
