@@ -174,6 +174,31 @@ class RetoController {
       });
     }
   }
+
+  async crear(req, res) {
+        try {
+            const { nombre, descripcion, nivel_dificultad, duracion, cantidad_preguntas, id_tema } = req.body;
+
+            // Validaciones básicas
+            if (!nombre || !descripcion || !nivel_dificultad || !duracion || !cantidad_preguntas || !id_tema) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Todos los campos son obligatorios'
+                });
+            }
+
+            const resultado = await RetoService.crearReto(req.body);
+
+            return res.status(201).json(resultado);
+
+        } catch (error) {
+            console.error('Error en crearReto:', error);
+            return res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
 }
 
 export default new RetoController();

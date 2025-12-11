@@ -1,5 +1,6 @@
 import Tema from "../models/Tema.js";
 import Area from "../models/Area.js";
+import db from "../db/db.js";
 
 async function obtenerTemasPorArea(id_area) {
   try {
@@ -53,7 +54,26 @@ async function crearTema(descripcion, id_area) {
   }
 }
 
+async function listarTemasPorAreaConConteo(idArea) {
+        try {
+            const temas = await Tema.findAll({
+                where: { id_area: idArea },
+                attributes: [
+                    'id_tema', 
+                    'descripcion',
+                    // Subconsulta para contar preguntas por tema
+                    [db.literal(`(SELECT COUNT(*) FROM pregunta WHERE pregunta.id_tema = tema.id_tema)`), 'total_preguntas']
+                ],
+                raw: true
+            });
+            return temas;
+        } catch (error) {
+            throw new Error(`Error al listar temas: ${error.message}`);
+        }
+}
+
 export default {
   obtenerTemasPorArea,
+  listarTemasPorAreaConConteo,
   crearTema,
 };

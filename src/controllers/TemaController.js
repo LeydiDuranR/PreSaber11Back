@@ -11,6 +11,16 @@ async function obtenerTemasPorArea (req, res) {
   }
 };
 
+async function listarPorArea(req, res) {
+        try {
+            const { idArea } = req.params;
+            const temas = await temaService.listarTemasPorAreaConConteo(idArea);
+            res.json({ success: true, data: temas });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+}
+
 async function crearTema (req, res) {
   try {
     const { descripcion, id_area } = req.body;
@@ -26,4 +36,4 @@ async function crearTema (req, res) {
 };
 
 
-export default{crearTema, obtenerTemasPorArea};
+export default{crearTema, obtenerTemasPorArea, listarPorArea};
