@@ -72,7 +72,10 @@ async function obtenerPreguntasParaSesion(id_sesion, id_estudiante) {
         }]
       }
     ],
-    order: [['orden_en_sesion', 'ASC']]
+    order: [
+      [{ model: SesionArea, as: "sesion_area" }, "orden_area", "ASC"],
+      ["orden_en_sesion", "ASC"]
+    ]
   });
 
   // 4. Construir array de preguntas usando los nombres exactos de Sequelize

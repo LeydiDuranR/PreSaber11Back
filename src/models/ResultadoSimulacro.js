@@ -9,7 +9,7 @@ const ResultadoSimulacro = db.define("resultado_simulacro", {
         primaryKey: true,
         autoIncrement: true
     },
-    fecha_fin: { type: DataTypes.DATE, allowNull: false },
+    fecha_fin: { type: DataTypes.DATE, allowNull: true },
     puntaje_total: { type: DataTypes.INTEGER, allowNull: false },
     completado: { type: DataTypes.BOOLEAN, defaultValue: false },
 }, {
