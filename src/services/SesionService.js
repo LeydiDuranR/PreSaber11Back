@@ -54,6 +54,18 @@ async function obtenerPreguntasParaSesion(id_sesion, id_estudiante) {
     };
   }
 
+  // Crear ProgresoSesion si no existe (para trackear tiempo desde el inicio)
+  if (!progreso) {
+    progreso = await ProgresoSesion.create({
+      completada: false,
+      fecha_inicio: new Date(),
+      ultima_actualizacion: new Date(),
+      id_usuario: id_estudiante,
+      id_sesion: id_sesion,
+      ultima_pregunta: null
+    });
+  }
+
   // 3. Obtener todas las SesionPreguntas con sus relaciones
   const sesionPreguntas = await SesionPregunta.findAll({
     include: [
@@ -80,14 +92,13 @@ async function obtenerPreguntasParaSesion(id_sesion, id_estudiante) {
     ]
   });
 
-  // 4. Construir array de preguntas usando los nombres exactos de Sequelize
+  // 4. Construir array de preguntas
   const preguntasPlano = [];
 
   for (const sp of sesionPreguntas) {
     const sesionArea = sp.sesion_area;
     const pregunta = sp.preguntum;
     const opciones = pregunta?.opciones || [];
-
 
     preguntasPlano.push({
       id_sesion_pregunta: sp.id_sesion_pregunta,
@@ -134,29 +145,7 @@ async function obtenerPreguntasParaSesion(id_sesion, id_estudiante) {
     }]
   });
 
-  // 6. Filtrar respuestas del estudiante
-  // const respuestasFiltradas = [];
-  // for (const r of respuestas) {
-  //     const resultadoArea = r.resultado_area;
-  //     const resultadoSesion = resultadoArea?.resultado_sesion;
-
-  //     if (resultadoSesion) {
-  //         const existeVinculo = await ResultadoSimulacro.findOne({
-  //             where: { id_estudiante },
-  //             include: [{
-  //                 model: ResultadoSesion,
-  //                 where: { id_resultado_sesion: resultadoSesion.id_resultado_sesion },
-  //                 required: true
-  //             }]
-  //         });
-
-  //         if (existeVinculo) {
-  //             respuestasFiltradas.push(r);
-  //         }
-  //     }
-  // }
-
-  // 7. Marcar preguntas contestadas
+  // 6. Marcar preguntas contestadas
   const respuestasMap = new Map();
   respuestas.forEach(r => {
     respuestasMap.set(r.id_sesion_pregunta, {
@@ -170,7 +159,7 @@ async function obtenerPreguntasParaSesion(id_sesion, id_estudiante) {
     p.opcion_seleccionada = respuesta?.id_opcion_seleccionada || null;
   });
 
-  // 8. Calcular tiempo desde ResultadoSesion
+  // 7. Obtener ResultadoSesion para puntaje
   const resSim = await ResultadoSimulacro.findOne({
     where: {
       id_simulacro: sesion.id_simulacro,
@@ -184,23 +173,33 @@ async function obtenerPreguntasParaSesion(id_sesion, id_estudiante) {
     }]
   });
 
-  // 9. Calcular tiempo
-  const resultadoSesion = resSim?.resultado_sesions?.[sesion.orden - 1] || null;
+  const resultadoSesiones = resSim?.sesiones || [];
+  const resultadoSesion = resultadoSesiones[0] || null;
+
+  // 8. Calcular tiempo desde ProgresoSesion
   const duracion = Number(sesion.duracion_segundos || 0);
   let tiempo_usado = 0;
 
-  if (resultadoSesion && !progreso?.completada) {
-    // Sesión activa: calcular tiempo desde inicio
-    const inicio = new Date(resultadoSesion.fecha_inicio);
-    tiempo_usado = Math.floor((new Date() - inicio) / 1000);
-  } else if (resultadoSesion && progreso?.completada) {
-    // Sesión finalizada: usar tiempo guardado
+  if (progreso.completada && resultadoSesion) {
+    // Sesión finalizada: usar tiempo guardado en ResultadoSesion
     tiempo_usado = resultadoSesion.tiempo_usado_segundos || 0;
+  } else if (progreso.fecha_inicio) {
+    // Sesión activa: calcular tiempo desde ProgresoSesion.fecha_inicio
+    const inicio = new Date(progreso.fecha_inicio);
+    tiempo_usado = Math.floor((new Date() - inicio) / 1000);
   }
 
   const tiempo_restante = Math.max(0, duracion - tiempo_usado);
 
-  // 9. Obtener puntaje acumulado desde ResultadoSesion
+  console.log("⏰ Tiempo calculado:", {
+    duracion,
+    tiempo_usado,
+    tiempo_restante,
+    fecha_inicio: progreso.fecha_inicio,
+    completada: progreso.completada
+  });
+
+  // 9. Obtener puntaje acumulado
   const puntaje_acumulado = resultadoSesion?.puntaje_sesion || 0;
 
   return {
@@ -214,16 +213,16 @@ async function obtenerPreguntasParaSesion(id_sesion, id_estudiante) {
     preguntas_contestadas: respuestas.length,
     preguntas: preguntasPlano,
     progreso: {
-      ultima_pregunta: progreso?.ultima_pregunta || null,
+      ultima_pregunta: progreso?.ultima_pregunta || null, // Es id_pregunta
       completada: progreso?.completada || false,
-      puntaje_acumulado, // Desde ResultadoSesion, no ProgresoSesion
+      puntaje_acumulado,
       puede_continuar: !progreso?.completada
     },
     puedeIngresar: true
   };
 }
 
-// Guardar respuesta - SIN USAR id_resultado_simulacro como FK
+// Guardar respuesta
 async function guardarRespuesta({
   id_estudiante,
   id_sesion,
@@ -234,7 +233,7 @@ async function guardarRespuesta({
   const t = await db.transaction();
 
   try {
-    console.log("📝 Guardando respuesta:", { id_estudiante, id_sesion, id_sesion_pregunta, id_opcion });
+    console.log("Guardando respuesta:", { id_estudiante, id_sesion, id_sesion_pregunta, id_opcion });
 
     // 1. Validar que la sesión no esté completada
     const progresoExistente = await ProgresoSesion.findOne({
@@ -332,7 +331,7 @@ async function guardarRespuesta({
         puntaje_sesion: 0,
         tiempo_usado_segundos: 0,
         fecha_inicio: new Date(),
-        fecha_fin: new Date(), // ⭐ Temporal - se actualizará al finalizar
+        fecha_fin: new Date(), // Temporal - se actualizará al finalizar
         id_sesion: id_sesion,
         id_resultado_simulacro: resSim.id_resultado_simulacro,
       }, { transaction: t });
@@ -400,11 +399,11 @@ async function guardarRespuesta({
         resSim.puntaje_total = Number(resSim.puntaje_total || 0) - puntajeAnterior + puntajeRespuesta;
         await resSim.save({ transaction: t });
       } else {
-        console.log("ℹ️ Respuesta sin cambios");
+        console.log("Respuesta sin cambios");
       }
     } else {
       // Nueva respuesta
-      console.log("✨ Creando nueva respuesta...");
+      console.log("Creando nueva respuesta...");
       await RespuestaEstudiante.create({
         puntaje_respuesta: puntajeRespuesta,
         es_correcta: esCorrecta,
@@ -431,7 +430,7 @@ async function guardarRespuesta({
     });
 
     if (!progreso) {
-      console.log("📊 Creando ProgresoSesion...");
+      console.log("Creando ProgresoSesion...");
       progreso = await ProgresoSesion.create({
         completada: false,
         fecha_inicio: new Date(),
@@ -441,7 +440,7 @@ async function guardarRespuesta({
         ultima_pregunta: sp.id_pregunta // Usar id_pregunta, no id_sesion_pregunta
       }, { transaction: t });
     } else {
-      progreso.ultima_pregunta = sp.id_pregunta; // Usar id_pregunta, no id_sesion_pregunta
+      progreso.ultima_pregunta = sp.id_pregunta; //  Usar id_pregunta, no id_sesion_pregunta
       progreso.ultima_actualizacion = new Date();
       await progreso.save({ transaction: t });
     }
@@ -458,7 +457,7 @@ async function guardarRespuesta({
 
     await t.commit();
 
-    console.log("✅ Respuesta guardada exitosamente");
+    console.log(" Respuesta guardada exitosamente");
 
     return {
       status: "ok",
@@ -582,13 +581,11 @@ async function finalizarSesion({ id_estudiante, id_sesion, tiempo_usado_final })
   }
 }
 
-
-
+// Obtener resultados
 async function obtenerResultadosSesion(id_sesion, id_estudiante) {
-
   const sesion = await Sesion.findByPk(id_sesion);
   if (!sesion) throw new Error("Sesión no encontrada");
-  // Verificar que esté completada
+
   const progreso = await ProgresoSesion.findOne({
     where: { id_usuario: id_estudiante, id_sesion }
   });
@@ -600,7 +597,6 @@ async function obtenerResultadosSesion(id_sesion, id_estudiante) {
     };
   }
 
-  // Obtener ResultadoSesion para puntajes y tiempos
   const resSim = await ResultadoSimulacro.findOne({
     where: { id_estudiante },
     include: [{
@@ -611,7 +607,8 @@ async function obtenerResultadosSesion(id_sesion, id_estudiante) {
     }]
   });
 
-  const resultadoSesion = resSim?.resultado_sesions?.[sesion.orden - 1] || null;
+  const resultadoSesiones = resSim?.sesiones || [];
+  const resultadoSesion = resultadoSesiones[0] || null;
 
   if (!resultadoSesion) {
     return {
@@ -620,7 +617,6 @@ async function obtenerResultadosSesion(id_sesion, id_estudiante) {
     };
   }
 
-  // Calcular puntaje total de la sesión (suma de puntajes_base)
   const sesionPreguntas = await SesionPregunta.findAll({
     attributes: ['puntaje_base'],
     include: [{
@@ -636,7 +632,6 @@ async function obtenerResultadosSesion(id_sesion, id_estudiante) {
     sum + Number(sp.puntaje_base || 0), 0
   );
 
-  // Obtener respuestas con detalles usando FK
   const respuestas = await RespuestaEstudiante.findAll({
     include: [{
       model: ResultadoArea,
@@ -650,48 +645,12 @@ async function obtenerResultadosSesion(id_sesion, id_estudiante) {
           as: "resultado_simulacro",
           where: { id_estudiante }
         }]
-      }, {
-        model: SesionArea,
-        as: "sesion_area",
-        include: [{ model: Area }]
       }]
-    }, {
-      model: SesionPregunta,
-      as: "sesion_pregunta",
-      include: [{
-        model: Pregunta,
-        as: "preguntum",
-        include: [{ model: Opcion, as: "opciones" }]
-      }]
-    }],
-    order: [[{ model: SesionPregunta }, 'orden_en_sesion', 'ASC']]
+    }]
   });
 
-  // Contar correctas e incorrectas desde las respuestas
   const correctas = respuestas.filter(r => r.es_correcta).length;
   const incorrectas = respuestas.length - correctas;
-
-
-
-
-  // const detalleRespuestas = respuestas.map(r => {
-  //     const sesionPregunta = r.sesion_preguntum;
-  //     const pregunta = sesionPregunta?.preguntum;
-  //     const opciones = pregunta?.opciones || [];
-
-  //     const resultadoArea = r.resultado_area;
-  //     const sesionArea = resultadoArea?.sesion_area;
-
-  //     return {
-  //         orden: sesionPregunta?.orden_en_sesion,
-  //         pregunta: pregunta?.enunciado || pregunta?.texto,
-  //         tu_respuesta: opciones.find(o => o.id_opcion === r.id_opcion_seleccionada)?.texto_opcion,
-  //         respuesta_correcta: opciones.find(o => o.es_correcta)?.texto_opcion,
-  //         es_correcta: r.es_correcta,
-  //         puntaje_obtenido: r.puntaje_respuesta,
-  //         area: sesionArea?.area?.nombre
-  //     };
-  // });
 
   return {
     disponible: true,
@@ -700,15 +659,13 @@ async function obtenerResultadosSesion(id_sesion, id_estudiante) {
     correctas,
     incorrectas,
     tiempo_total: resultadoSesion.tiempo_usado_segundos,
-    experiencia_ganada: puntaje_total_sesion * 2,
-    // respuestas: detalleRespuestas
+    experiencia_ganada: puntaje_total_sesion * 2
   };
 }
-
 
 export default {
   obtenerPreguntasParaSesion,
   guardarRespuesta,
   finalizarSesion,
   obtenerResultadosSesion
-}
+};
